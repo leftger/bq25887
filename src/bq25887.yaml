@@ -1,0 +1,1212 @@
+config:
+  default_byte_order: BE
+  buffer_address_type: u8
+  command_address_type: u8
+  register_address_type: u8
+  defmt_feature: defmt-03
+
+CELL_VOLTAGE_LIMIT:
+  type: register
+  description: Cell Voltage Regulation Limit Register
+  allow_bit_overlap: true
+  address: 0x00
+  size_bits: 8
+  reset_value: 0xA0
+  fields:
+    VCELLREG:
+      base: uint
+      start: 0
+      end: 8
+      access: RW
+      description: |
+        Cell Charge Voltage Limit
+        Offset: 3.40 V
+        Range: 3.40 V to 4.60 V
+        Default: 4.20 V
+CHARGE_CURRENT_LIMIT:
+  type: register
+  description: Charger Current Limit Register
+  address: 0x01
+  size_bits: 8
+  reset_value: 0x5E
+  fields:
+    EN_HIZ:
+      base: bool
+      start: 7
+      description: |
+        Enable HIZ Mode:
+        0 - Disable (default)
+        1 - Enable
+    EN_ILIM:
+      base: bool
+      start: 6
+      description: |
+        Enable ILIM Pin Function:
+        0 - Disable
+        1 - Enable (default)
+    ICHG:
+      base: uint
+      start: 0
+      end: 6
+      access: RW
+      description: |
+        Fast Charge Current Limit
+        Offset: 0 mA
+        Range: 100 mA - 2200 mA
+        Default: 1500 mA
+        Note: values > 2.2 A (0x2C) are clamped to 2.2 A
+              values < 100 mA (0x01) are clamped to 100 mA
+      try_conversion:
+        name: ICHG
+        mA_100: 0x01
+        mA_150: 0x02
+        mA_200: 0x03
+        mA_250: 0x04
+        mA_300: 0x05
+        mA_350: 0x06
+        mA_400: 0x07
+        mA_450: 0x08
+        mA_500: 0x09
+        mA_550: 0x0A
+        mA_600: 0x0B
+        mA_650: 0x0C
+        mA_700: 0x0D
+        mA_750: 0x0E
+        mA_800: 0x0F
+        mA_850: 0x10
+        mA_900: 0x11
+        mA_950: 0x12
+        mA_1000: 0x13
+        mA_1050: 0x14
+        mA_1100: 0x15
+        mA_1150: 0x16
+        mA_1200: 0x17
+        mA_1250: 0x18
+        mA_1300: 0x19
+        mA_1350: 0x1A
+        mA_1400: 0x1B
+        mA_1450: 0x1C
+        mA_1500: 0x1D
+        mA_1550: 0x1E
+        mA_1600: 0x1F
+        mA_1650: 0x20
+        mA_1700: 0x21
+        mA_1750: 0x22
+        mA_1800: 0x23
+        mA_1850: 0x24
+        mA_1900: 0x25
+        mA_1950: 0x26
+        mA_2000: 0x27
+        mA_2050: 0x28
+        mA_2100: 0x29
+        mA_2150: 0x2A
+        mA_2200: 0x2B
+INPUT_VOLTAGE_LIMIT:
+  type: register
+  description: Input Voltage Limit Register
+  address: 0x02
+  size_bits: 8
+  reset_value: 0x84
+  fields:
+    EN_VINDPM_RST:
+      base: bool
+      start: 7
+      description: |
+        Enable VINDPM automatic reset upon adapter plugin:
+        0 - Disable
+        1 - Enable (default)
+    EN_BAT_DISCHG:
+      base: bool
+      start: 6
+      description: |
+        Enable BAT pin discharge load (IBAT_DISCHG):
+        0 - Disable (Default)
+        1 - Enable
+    PFM_OOA_DIS:
+      base: bool
+      start: 5
+      description: |
+        Disable out-of-audio mode in PFM:
+        0 - OOA Enabled (Default)
+        1 - OOA Disabled
+    VINDPM:
+      base: uint
+      start: 0
+      end: 5
+      access: RW
+      description: |
+        Absolute Input Voltage Limit
+        Offset: 3.9 V
+        Step: 100 mV
+        Range: 3.9 V - 5.5 V
+        Default: 4.3 V
+      try_conversion:
+        name: VINDPM
+        V_3900: 0x00
+        V_4000: 0x01
+        V_4100: 0x02
+        V_4200: 0x03
+        V_4300: 0x04
+        V_4400: 0x05
+        V_4500: 0x06
+        V_4600: 0x07
+        V_4700: 0x08
+        V_4800: 0x09
+        V_4900: 0x0A
+        V_5000: 0x0B
+        V_5100: 0x0C
+        V_5200: 0x0D
+        V_5300: 0x0E
+        V_5400: 0x0F
+        V_5500: 0x10
+INPUT_CURRENT_LIMIT:
+  type: register
+  description: Input Current Limit Register
+  address: 0x03
+  size_bits: 8
+  reset_value: 0x39
+  fields:
+    FORCE_ICO:
+      base: bool
+      start: 7
+      description: |
+        Force Input Current Optimization (ICO):
+        0 - Do not force (default)
+        1 - Force
+    FORCE_INDET:
+      base: bool
+      start: 6
+      description: |
+        Force PSEL detection
+    EN_ICO:
+      base: bool
+      start: 5
+      description: |
+        Enable Input Current Optimizer:
+        0 - Disabled
+        1 - Enabled (default)
+    IINDPM:
+      base: uint
+      start: 0
+      end: 5
+      access: RW
+      description: |
+        Input Current Limit
+        Offset: 500 mA
+        Step: 100 mA
+        Range: 500 mA - 3300 mA
+        Default: 3000 mA
+      try_conversion:
+        name: IINDPM
+        mA_500: 0x00
+        mA_600: 0x01
+        mA_700: 0x02
+        mA_800: 0x03
+        mA_900: 0x04
+        mA_1000: 0x05
+        mA_1100: 0x06
+        mA_1200: 0x07
+        mA_1300: 0x08
+        mA_1400: 0x09
+        mA_1500: 0x0A
+        mA_1600: 0x0B
+        mA_1700: 0x0C
+        mA_1800: 0x0D
+        mA_1900: 0x0E
+        mA_2000: 0x0F
+        mA_2100: 0x10
+        mA_2200: 0x11
+        mA_2300: 0x12
+        mA_2400: 0x13
+        mA_2500: 0x14
+        mA_2600: 0x15
+        mA_2700: 0x16
+        mA_2800: 0x17
+        mA_2900: 0x18
+        mA_3000: 0x19
+        mA_3100: 0x1A
+        mA_3200: 0x1B
+        mA_3300: 0x1C
+PRECHG_TERMINATION_CTRL:
+  type: register
+  description: Precharge and Termination Current Limit Register
+  address: 0x04
+  size_bits: 8
+  reset_value: 0x22
+  fields:
+    IPRECHG:
+      base: uint
+      start: 4
+      end: 8
+      access: RW
+      description: |
+        Precharge Current Limit
+        Offset: 50 mA
+        Range: 50 mA - 800 mA
+        Default: 150 mA
+      try_conversion:
+        name: IPRECHG
+        mA_50: 0x00
+        mA_100: 0x01
+        mA_150: 0x02
+        mA_200: 0x03
+        mA_250: 0x04
+        mA_300: 0x05
+        mA_350: 0x06
+        mA_400: 0x07
+        mA_450: 0x08
+        mA_500: 0x09
+        mA_550: 0x0A
+        mA_600: 0x0B
+        mA_650: 0x0C
+        mA_700: 0x0D
+        mA_750: 0x0E
+        mA_800: 0x0F
+    ITERM:
+      base: uint
+      start: 0
+      end: 4
+      access: RW
+      description: |
+        Termination Current Limit
+        Offset: 50 mA
+        Range: 50 mA - 800 mA
+        Default: 150 mA
+      try_conversion:
+        name: ITERM
+        mA_50: 0x00
+        mA_100: 0x01
+        mA_150: 0x02
+        mA_200: 0x03
+        mA_250: 0x04
+        mA_300: 0x05
+        mA_350: 0x06
+        mA_400: 0x07
+        mA_450: 0x08
+        mA_500: 0x09
+        mA_550: 0x0A
+        mA_600: 0x0B
+        mA_650: 0x0C
+        mA_700: 0x0D
+        mA_750: 0x0E
+        mA_800: 0x0F
+CHARGER_CTRL_1:
+  type: register
+  description: Charger Control 1 Register
+  address: 0x05
+  size_bits: 8
+  reset_value: 0x9D
+  fields:
+    EN_TERM:
+      base: bool
+      start: 7
+      description: |
+        Enable Termination:
+        0 - Disable
+        1 - Enable
+    STAT_DIS:
+      base: bool
+      start: 6
+      end: 7
+      description: |
+        STAT Pin Disable:
+        0 - Enable STAT Pin Function
+        1 - Disable STAT Pin Function
+    WATCHDOG:
+      base: uint
+      start: 4
+      end: 6
+      description: |
+        I2C Watchdog Timer Settings:
+        00 - Disable WD Timer
+        01 - 40s
+        10 - 80s
+        11 - 160s
+      conversion:
+        name: WATCHDOG
+        WD_Disable: 0b00
+        WD_40s: 0b01
+        WD_80s: 0b10
+        WD_160s: 0b11
+    EN_TIMER:
+      base: bool
+      start: 3
+      description: |
+        Charging Safety Timer Enable:
+        0 - Disable
+        1 - Enable
+    CHG_TIMER:
+      base: uint
+      start: 1
+      end: 3
+      description: |
+        Fast Charge Timer Setting:
+        00 - 5hrs
+        01 - 8hrs
+        10 - 12hrs
+        11 - 20hrs
+      conversion:
+        name: CHG_TIMER
+        FC_5hrs: 0b00
+        FC_8hrs: 0b01
+        FC_12hrs: 0b10
+        FC_20hrs: 0b11
+    TMR2X_EN:
+      base: bool
+      start: 0
+      description: |
+        Safety Timer During DPM or TREG:
+        0 - Safety Timer Always Count Normally
+        1 - Safety Timer Slowed By 2X during input DPM or TREG
+CHARGER_CTRL_2:
+  type: register
+  description: Charger Control 2 Register
+  address: 0x06
+  size_bits: 8
+  reset_value: 0x7D
+  fields:
+    Reserved:
+      start: 7
+      base: bool
+      access: RO
+      description: |
+        Reserved bit always reads 0
+    AUTO_INDET_EN:
+      start: 6
+      end: 7
+      base: bool
+      description: |
+        Automatic PSEL Detection Enable:
+        0 - Disable PSEL Detection when VBUS plugs In
+        1 - Enable PSEL Detection when VBUS plus In
+    TREG:
+      start: 4
+      end: 6
+      base: uint
+      description: |
+        Thermal Regulation Threshold
+        00 - 60°C
+        01 - 80°C
+        10 - 100°C
+        11 - 120°C
+      conversion:
+        name: TREG
+        Treg_60C: 0b00
+        Treg_80C: 0b01
+        Treg_100C: 0b10
+        Treg_120C: 0b11
+CHARGER_CTRL_3:
+  type: register
+  description: Charger Control 3 Register
+  address: 0x07
+  size_bits: 8
+  reset_value: 0x00
+  fields:
+    PFM_DIS:
+      start: 7
+      base: bool
+      description: |
+        PFM Mode Disable control:
+        0 - Enable PFM operation
+        1 - Disable PFM operation
+    WD_RST:
+      start: 6
+      end: 7
+      base: bool
+      description: |
+        I2C Watchdog Timer Reset:
+        0 - Normal
+        1 - Reset (back to 0 after reset)
+    TOPOFF_TIMER:
+      start: 4
+      end: 6
+      base: uint
+      description: |
+        Top-off Timer Control:
+        00 - Disabled
+        01 - 15 mins
+        10 - 30 mins
+        11 - 45 mins
+      conversion:
+        name: TOPOFF_TIMER
+        TO_Disable: 0b00
+        TO_15mins: 0b01
+        TO_30mins: 0b10
+        TO_45mins: 0b11
+    Reserved:
+      start: 0
+      end: 4
+      base: uint
+      access: RO
+      description: |
+        Reserved bits. Always reads back 0b0010
+CHARGER_CTRL_4:
+  type: register
+  description: Charger Control 4 Register
+  address: 0x08
+  size_bits: 8
+  reset_value: 0x0D
+  fields:
+    Reserved:
+      end: 8
+      start: 5
+      base: uint
+      access: RO
+      description: |
+        Reserved. Always reads 0b000
+    JEITA_VSET:
+      start: 3
+      end: 5
+      base: uint
+      description: |
+        JEITA High Temp Voltage Setting:
+        00 - Charge Suspend
+        01 - VREG to 8.0V
+        10 - VREG to 8.3V
+        11 - VREG Unchanged
+      conversion:
+        name: JEITA_VSET
+        VSET_Suspend: 0b00
+        VSET_8V: 0b01
+        VSET_8P3V: 0b10
+        VSET_Unchanged: 0b11
+    JEITA_ISETH:
+      start: 2
+      end: 3
+      base: uint
+      description: |
+        JEITA High Temp Current Setting:
+        0 - 40% of ICHG
+        1 - 100% of ICHG
+      conversion:
+        name: JEITA_ISETH
+        ISETH_40p: 0b0
+        ISETH_100p: 0b1
+    JEITA_ISETC:
+      start: 0
+      end: 2
+      base: uint
+      description: |
+        JEITA Low Temp Current Setting:
+        00 - Charge Suspend
+        01 - 20% of ICHG
+        10 - 40% of ICHG
+        11 - 100% of ICHG
+      conversion:
+        name: JEITA_ISETC
+        ISETC_Suspend: 0b00
+        ISETC_20p: 0b01
+        ISETC_40p: 0b10
+        ISETC_100p: 0b11
+RESERVED:
+  type: register
+  description: Reserved Register
+  address: 0x09
+  size_bits: 8
+  reset_value: 0x00
+  fields:
+    Reserved:
+      start: 0
+      end: 8
+      base: uint
+      access: RO
+      description: |
+        Reserved bits. Readonly.
+ICO_CURRENT_LIMIT:
+  type: register
+  description: ICO Current Limit in Use Register
+  address: 0x0A
+  size_bits: 8
+  reset_value: 0x00
+  fields:
+    ICO_ILIM:
+      base: uint
+      start: 0
+      end: 5
+      access: RO
+      description: |
+        Input Current Limit used by ICO when enabled.
+        Offset: 500 mA
+        Step: 100 mA
+        Range: 500 mA - 3300 mA
+CHARGER_STATUS_1:
+  type: register
+  description: Charger Status 1 Register
+  address: 0x0B
+  size_bits: 8
+  access: RO
+  reset_value: 0x00
+  fields:
+    IINDPM_STAT:
+      base: bool
+      start: 6
+      description: |
+        Input current regulation status.
+        0 - Normal
+        1 - In IINDPM
+    VINDPM_STAT:
+      base: bool
+      start: 5
+      description: |
+        Input voltage regulation status.
+        0 - Normal
+        1 - In VINDPM
+    TREG_STAT:
+      base: bool
+      start: 4
+      description: |
+        Thermal regulation status.
+        0 - Normal
+        1 - In thermal regulation
+    WD_STAT:
+      base: bool
+      start: 3
+      description: |
+        Watchdog timer status.
+        0 - Normal
+        1 - Expired
+    CHRG_STAT:
+      base: uint
+      start: 0
+      end: 3
+      access: RO
+      description: Charger status. 100 - Taper Charge 101 - Top-off Charging 110 - Charge Done 111 - Reserved
+      conversion:
+        name: CHRG_STAT
+        NotCharging:
+          value: 0b000
+          description: Not Charging
+        TrickleCharge:
+          value: 0b001
+          description: Trickle Charge (VBAT < VBAT_SHORT)
+        PreCharge:
+          value: 0b010
+          description: Pre-charge (VBAT_UVLO_RISING < VBAT < VBAT_LOWV)
+        FastCharge:
+          value: 0b011
+          description: Fast-charge (CC mode)
+        TaperCharge:
+          value: 0b100
+          description: Taper Charge (CV mode)
+        TopoffTimerCharging:
+          value: 0b101
+          description: Top-off Timer Charging
+        ChargeTerminationDone:
+          value: 0b110
+          description: Charge Termination Done
+        Reserved:
+          value: 0b111
+          description: Reserved
+CHARGER_STATUS_2:
+  type: register
+  description: Charger Status 2 Register
+  address: 0x0C
+  access: RO
+  size_bits: 8
+  reset_value: 0x00
+  fields:
+    PG_STAT:
+      base: bool
+      start: 7
+      description: |
+        Power good indicator.
+        0 - Not present
+        1 - Power good
+    VBUS_STAT:
+      base: uint
+      start: 4
+      end: 7
+      description: VBUS detection status.
+      conversion:
+        name: VBUS_STAT
+        NoInput:
+          value: 0b000
+          description: No Input
+        USBSDP:
+          value: 0b001
+          description: USB Host SDP ---> PSEL High
+        USBCDP:
+          value: 0b010
+          description: USB CDP (1.5 A)
+        Adapter:
+          value: 0b011
+          description: Adapter (3.0 A) ---> PSEL low
+        PoorSource:
+          value: 0b100
+          description: POORSRC detected 7 consecutive times
+        UnknownAdapter:
+          value: 0b101
+          description: Unknown Adapter (500 mA)
+        NonStdAdapter:
+          value: 0b110
+          description: Non-standard Adapter (1 A/2 A/2.1 A/2.4 A)
+        Reserved:
+          value: 0b111
+          description: Reserved value
+    ICO_STAT:
+      base: uint
+      start: 1
+      end: 3
+      description: Input current optimizer status.
+      conversion:
+        name: ICO_STAT
+        ICODisabled:
+          value: 0b00
+          description: ICO Disabled
+        ICOInProgress:
+          value: 0b01
+          description: ICO Optimization is in progress
+        MaxInputCurrent:
+          value: 0b10
+          description: Maximum input current detected
+        Reserved:
+          value: 0b11
+          description: Reserved
+NTC_STATUS:
+  type: register
+  description: NTC Status Register
+  address: 0x0D
+  size_bits: 8
+  access: RO
+  reset_value: 0x00
+  fields:
+    TS_STAT:
+      base: uint
+      start: 0
+      end: 3
+      description: Thermistor status.
+      try_conversion:
+        name: TS_STAT
+        Normal:
+          value: 0b000
+          description: Normal
+        Warm:
+          value: 0b010
+          description: TS Warm
+        Cool:
+          value: 0b011
+          description: TS Cool
+        Cold:
+          value: 0b101
+          description: TS Cold
+        Hot:
+          value: 0b110
+          description: TS Hot
+FAULT_STATUS:
+  type: register
+  description: Fault Status Register
+  address: 0x0E
+  size_bits: 8
+  access: RO
+  reset_value: 0x00
+  fields:
+    VBUS_OVP_STAT:
+      base: bool
+      start: 7
+      description: |
+        VBUS over-voltage protection status.
+        0 - Normal
+        1 - OVP fault
+    TSHUT_STAT:
+      base: bool
+      start: 6
+      description: |
+        Thermal shutdown status.
+        0 - Normal
+        1 - Shutdown
+    TMR_STAT:
+      base: bool
+      start: 4
+      description: |
+        Charge safety timer status.
+        0 - Normal
+        1 - Expired
+CHARGER_FLAG_1:
+  type: register
+  description: Charger Flag 1 Register
+  address: 0x0F
+  size_bits: 8
+  reset_value: 0x00
+  fields:
+    IINDPM_FLAG:
+      base: bool
+      start: 6
+      description: |
+        IINDPM status change flag
+    VINDPM_FLAG:
+      base: bool
+      start: 5
+      description: |
+        VINDPM status change flag
+    TREG_FLAG:
+      base: bool
+      start: 4
+      description: |
+        Thermal regulation flag
+    WD_FLAG:
+      base: bool
+      start: 3
+      description: |
+        Watchdog timer expired flag
+    CHRG_FLAG:
+      base: bool
+      start: 0
+      description: |
+        Charge status transition flag
+CHARGER_FLAG_2:
+  type: register
+  description: Charger Flag 2 Register
+  address: 0x10
+  size_bits: 8
+  reset_value: 0x00
+  fields:
+    PG_FLAG:
+      base: bool
+      start: 7
+      description: Power Good INT Flag
+    VBUS_FLAG:
+      base: bool
+      start: 4
+      description: VBUS Status INT Flag
+    TS_FLAG:
+      base: bool
+      start: 2
+      description: TS Status INT Flag
+    ICO_FLAG:
+      base: bool
+      start: 1
+      description: ICO Status INT Flag
+FAULT_FLAG:
+  type: register
+  description: Fault Flag Register
+  address: 0x11
+  size_bits: 8
+  reset_value: 0x00
+  fields:
+    VBUS_OVP_FLAG:
+      base: bool
+      start: 7
+    TSHUT_FLAG:
+      base: bool
+      start: 6
+    TMR_FLAG:
+      base: bool
+      start: 4
+CHARGER_MASK_1:
+  type: register
+  description: Charger Mask 1 Register
+  address: 0x12
+  size_bits: 8
+  reset_value: 0x00
+  fields:
+    ADC_DONE_MASK:
+      base: bool
+      start: 7
+    IINDPM_MASK:
+      base: bool
+      start: 6
+    VINDPM_MASK:
+      base: bool
+      start: 5
+    TREG_MASK:
+      base: bool
+      start: 4
+    WD_MASK:
+      base: bool
+      start: 3
+    CHRG_MASK:
+      base: bool
+      start: 0
+CHARGER_MASK_2:
+  type: register
+  description: Charger Mask 2 Register
+  address: 0x13
+  size_bits: 8
+  reset_value: 0x00
+  fields:
+    PG_MASK:
+      base: bool
+      start: 7
+    VBUS_MASK:
+      base: bool
+      start: 4
+    TS_MASK:
+      base: bool
+      start: 2
+    ICO_MASK:
+      base: bool
+      start: 1
+FAULT_MASK:
+  type: register
+  description: Fault Mask Register
+  address: 0x14
+  size_bits: 8
+  reset_value: 0x00
+  fields:
+    VBUS_OVP_MASK:
+      base: bool
+      start: 7
+    TSHUT_MASK:
+      base: bool
+      start: 6
+    TMR_MASK:
+      base: bool
+      start: 4
+ADC_CONTROL:
+  type: register
+  description: ADC Control Register
+  address: 0x15
+  size_bits: 8
+  reset_value: 0x30
+  fields:
+    ADC_EN:
+      base: bool
+      start: 7
+    ADC_RATE:
+      base: uint
+      start: 6
+      end: 7
+      description: ADC conversion mode
+      conversion:
+        name: ADC_RATE
+        Continuous:
+          value: 0
+          description: Continuous conversion
+        OneShot:
+          value: 1
+          description: One-shot conversion
+    ADC_SAMPLE:
+      base: uint
+      start: 4
+      end: 6
+      description: ADC resolution and timing
+      conversion:
+        name: ADC_SAMPLE
+        Bits12:
+          value: 0b00
+          description: 12-bit (3ms)
+        Bits13:
+          value: 0b01
+          description: 13-bit (6ms)
+        Bits14:
+          value: 0b10
+          description: 14-bit (12ms)
+        Bits15:
+          value: 0b11
+          description: 15-bit (24ms)
+ADC_FUNCTION_DISABLE:
+  type: register
+  description: ADC Function Disable Register
+  address: 0x16
+  size_bits: 8
+  reset_value: 0x00
+  fields:
+    IBUS_ADC_DIS: {base: bool, start: 7}
+    ICHG_ADC_DIS: {base: bool, start: 6}
+    VBUS_ADC_DIS: {base: bool, start: 5}
+    VBAT_ADC_DIS: {base: bool, start: 4}
+    TS_ADC_DIS: {base: bool, start: 2}
+    VCELL_ADC_DIS: {base: bool, start: 1}
+    TDIE_ADC_DIS: {base: bool, start: 0}
+IBUS_ADC1:
+  type: register
+  description: IBUS ADC High Byte
+  address: 0x17
+  size_bits: 8
+  reset_value: 0x00
+  fields:
+    IBUS_ADC_MSB: {base: uint, start: 0, end: 8}
+IBUS_ADC0:
+  type: register
+  description: IBUS ADC Low Byte
+  address: 0x18
+  size_bits: 8
+  reset_value: 0x00
+  fields:
+    IBUS_ADC_LSB: {base: uint, start: 0, end: 8}
+ICHG_ADC1:
+  type: register
+  description: ICHG ADC High Byte
+  address: 0x19
+  size_bits: 8
+  reset_value: 0x00
+  fields:
+    ICHG_ADC_MSB: {base: uint, start: 0, end: 8}
+ICHG_ADC0:
+  type: register
+  description: ICHG ADC Low Byte
+  address: 0x1A
+  size_bits: 8
+  reset_value: 0x00
+  fields:
+    ICHG_ADC_LSB: {base: uint, start: 0, end: 8}
+VBUS_ADC1:
+  type: register
+  description: VBUS ADC High Byte
+  address: 0x1B
+  size_bits: 8
+  reset_value: 0x00
+  fields:
+    VBUS_ADC_MSB: {base: uint, start: 0, end: 8}
+VBUS_ADC0:
+  type: register
+  description: VBUS ADC Low Byte
+  address: 0x1C
+  size_bits: 8
+  reset_value: 0x00
+  fields:
+    VBUS_ADC_LSB: {base: uint, start: 0, end: 8}
+VBAT_ADC1:
+  type: register
+  description: VBAT ADC High Byte
+  address: 0x1D
+  size_bits: 8
+  reset_value: 0x00
+  fields:
+    VBAT_ADC_MSB: {base: uint, start: 0, end: 8}
+VBAT_ADC0:
+  type: register
+  description: VBAT ADC Low Byte
+  address: 0x1E
+  size_bits: 8
+  reset_value: 0x00
+  fields:
+    VBAT_ADC_LSB: {base: uint, start: 0, end: 8}
+VCELLTOP_ADC1:
+  type: register
+  description: VCELLTOP ADC High Byte
+  address: 0x1F
+  size_bits: 8
+  reset_value: 0x00
+  fields:
+    VCELLTOP_ADC_MSB: {base: uint, start: 0, end: 8}
+VCELLTOP_ADC0:
+  type: register
+  description: VCELLTOP ADC Low Byte
+  address: 0x20
+  size_bits: 8
+  reset_value: 0x00
+  fields:
+    VCELLTOP_ADC_LSB: {base: uint, start: 0, end: 8}
+TS_ADC1:
+  type: register
+  description: TS ADC High Byte
+  address: 0x21
+  size_bits: 8
+  reset_value: 0x00
+  fields:
+    TS_ADC_MSB: {base: uint, start: 0, end: 8}
+TS_ADC0:
+  type: register
+  description: TS ADC Low Byte
+  address: 0x22
+  size_bits: 8
+  reset_value: 0x00
+  fields:
+    TS_ADC_LSB: {base: uint, start: 0, end: 8}
+TDIE_ADC1:
+  type: register
+  description: TDIE ADC High Byte
+  address: 0x23
+  size_bits: 8
+  reset_value: 0x00
+  fields:
+    TDIE_ADC_MSB: {base: uint, start: 0, end: 8}
+TDIE_ADC0:
+  type: register
+  description: TDIE ADC Low Byte
+  address: 0x24
+  size_bits: 8
+  reset_value: 0x00
+  fields:
+    TDIE_ADC_LSB: {base: uint, start: 0, end: 8}
+PART_INFORMATION:
+  type: register
+  description: Part Information Register
+  address: 0x25
+  size_bits: 8
+  reset_value: 0x28
+  fields:
+    REG_RST:
+      base: bool
+      start: 7
+      description: Set to reset registers to default values
+    PN:
+      base: uint
+      start: 3
+      end: 6
+      description: Part Number Identifier
+      try_conversion:
+        name: PN
+        BQ25887:
+          value: 0b0101
+    DEV_REV:
+      base: uint
+      start: 0
+      end: 3
+      description: Device Revision
+VCELLBOT_ADC1:
+  type: register
+  description: VCELLBOT ADC High Byte
+  address: 0x26
+  size_bits: 8
+  reset_value: 0x00
+  fields:
+    VCELLBOT_ADC_MSB: {base: uint, start: 0, end: 8}
+VCELLBOT_ADC0:
+  type: register
+  description: VCELLBOT ADC Low Byte
+  address: 0x27
+  size_bits: 8
+  reset_value: 0x00
+  fields:
+    VCELLBOT_ADC_LSB: {base: uint, start: 0, end: 8}
+CELL_BALANCE_CTRL_1:
+  type: register
+  description: Cell Balancing Control 1
+  address: 0x28
+  size_bits: 8
+  reset_value: 0x2A
+  fields:
+    VDIFF_END_OFFSET:
+      base: uint
+      start: 5
+      end: 8
+      description: Discharge stop threshold offset from VDIFF_START
+      conversion:
+        name: VDIFF_END_OFFSET
+        mV_30: 0b000
+        mV_40: 0b001
+        mV_50: 0b010
+        mV_60: 0b011
+        mV_70: 0b100
+        mV_80: 0b101
+        mV_90: 0b110
+        mV_100: 0b111
+    TCB_QUAL_INTERVAL:
+      base: uint
+      start: 4
+      end: 5
+      description: Time between measurements in prequal mode
+      conversion:
+        name: TCB_QUAL_INTERVAL
+        Min2: 0
+        Min4: 1
+    TCB_ACTIVE:
+      base: uint
+      start: 2
+      end: 4
+      description: Time between measurements in active balancing
+      conversion:
+        name: TCB_ACTIVE
+        S4: 0b00
+        S32: 0b01
+        Min2: 0b10
+        Min4: 0b11
+    TSETTLE:
+      base: uint
+      start: 0
+      end: 2
+      description: Delay between stopping charge and taking a measurement
+      conversion:
+        name: TSETTLE
+        ms10: 0b00
+        ms100: 0b01
+        s1: 0b10
+        s2: 0b11
+CELL_BALANCE_CTRL_2:
+  type: register
+  description: Cell Balancing Control 2
+  address: 0x29
+  size_bits: 8
+  reset_value: 0xF4
+  fields:
+    VQUAL_TH:
+      base: uint
+      start: 4
+      end: 8
+      description: Threshold to enter qualification mode from pre-qual
+      conversion:
+        name: VQUAL_TH
+        mV_40: 0b0000
+        mV_50: 0b0001
+        mV_60: 0b0010
+        mV_70: 0b0011
+        mV_80: 0b0100
+        mV_90: 0b0101
+        mV_100: 0b0110
+        mV_110: 0b0111
+        mV_120: 0b1000
+        mV_130: 0b1001
+        mV_140: 0b1010
+        mV_150: 0b1011
+        mV_160: 0b1100
+        mV_170: 0b1101
+        mV_180: 0b1110
+        Disabled: 0b1111
+    VDIFF_START:
+      base: uint
+      start: 0
+      end: 4
+      description: Voltage diff to enter active balancing
+      conversion:
+        name: VDIFF_START
+        mV_40: 0b0000
+        mV_50: 0b0001
+        mV_60: 0b0010
+        mV_70: 0b0011
+        mV_80: 0b0100
+        mV_90: 0b0101
+        mV_100: 0b0110
+        mV_110: 0b0111
+        mV_120: 0b1000
+        mV_130: 0b1001
+        mV_140: 0b1010
+        mV_150: 0b1011
+        mV_160: 0b1100
+        mV_170: 0b1101
+        mV_180: 0b1110
+        mV_190: 0b1111
+CELL_BALANCE_STAT_CTRL:
+  type: register
+  description: Cell Balancing Status and Control
+  address: 0x2A
+  size_bits: 8
+  reset_value: 0x81
+  fields:
+    CB_CHG_DIS: {base: bool, start: 7}
+    CB_AUTO_EN: {base: bool, start: 6}
+    CB_STAT: {base: bool, start: 5}
+    HS_CV_STAT: {base: bool, start: 4}
+    LS_CV_STAT: {base: bool, start: 3}
+    HS_OV_STAT: {base: bool, start: 2}
+    LS_OV_STAT: {base: bool, start: 1}
+    CB_OC_STAT: {base: bool, start: 0}
+CELL_BALANCE_FLAG:
+  type: register
+  description: Cell Balancing Flag
+  address: 0x2B
+  size_bits: 8
+  reset_value: 0x00
+  fields:
+    QCBH_EN: {base: bool, start: 7}
+    QCBL_EN: {base: bool, start: 6}
+    CB_FLAG: {base: bool, start: 5}
+    HS_CV_FLAG: {base: bool, start: 4}
+    LS_CV_FLAG: {base: bool, start: 3}
+    HS_OV_FLAG: {base: bool, start: 2}
+    LS_OV_FLAG: {base: bool, start: 1}
+    CB_OC_FLAG: {base: bool, start: 0}
+CELL_BALANCE_MASK:
+  type: register
+  description: Cell Balancing Mask
+  address: 0x2C
+  size_bits: 8
+  reset_value: 0x00
+  fields:
+    CB_MASK: {base: bool, start: 5}
+    HS_CV_MASK: {base: bool, start: 4}
+    LS_CV_MASK: {base: bool, start: 3}
+    HS_OV_MASK: {base: bool, start: 2}
+    LS_OV_MASK: {base: bool, start: 1}
+    CB_OC_MASK: {base: bool, start: 0}

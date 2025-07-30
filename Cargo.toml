@@ -1,0 +1,48 @@
+[package]
+name = "bq25887"
+version = "0.1.0"
+edition = "2024"
+authors = ["leftger@gmail.com"]
+description = "Device driver for the Texas Instruments BQ25887 linear battery chargers."
+readme = "README.md"
+repository = "https://github.com/leftger/bq25887"
+
+license = "MIT OR Apache-2.0"
+keywords = ["embedded", "driver", "battery", "charger"]
+categories = ["embedded", "no-std"]
+exclude = ["Cargo.lock", ".gitignore"]
+
+[dependencies]
+embedded-io-async = "0.6.1"
+embedded-hal = "1.0.0"
+embedded-hal-async = "1.0.0"
+embedded-batteries-async = "0.2.0"
+device-driver = { version = "1.0.3", default-features = false, features = [
+    "yaml",
+] }
+defmt = { version = "1.0.1", optional = true }
+log = { version = "0.4.14", optional = true }
+bincode = { version = "2.0.0", default-features = false, features = ["derive"] }
+
+[dev-dependencies]
+embedded-hal-mock = {version = "0.11.1", features = ["embedded-hal-async"] }
+tokio = {version = "1.42.0", features = ["rt", "macros", "time"] }
+
+[lints.rust]
+unsafe_code = "deny"
+missing_docs = "deny"
+
+[lints.clippy]
+correctness = "forbid"
+suspicious = "forbid"
+perf = "forbid"
+style = "forbid"
+pedantic = "deny"
+
+[features]
+default = []
+defmt-03 = [
+    "dep:defmt",
+    "device-driver/defmt-03",
+]
+log = ["dep:log"]
