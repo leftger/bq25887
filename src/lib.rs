@@ -12,20 +12,20 @@
 #![cfg_attr(not(test), no_std)]
 #![allow(missing_docs, warnings)]
 
-// use core::cell::Cell;
+use core::cell::Cell;
 
-// use embedded_batteries_async::smart_battery::{
-//     self, BatteryModeFields, BatteryStatusFields, CapacityModeSignedValue, CapacityModeValue, DeciKelvin, ErrorCode,
-//     SpecificationInfoFields,
-// };
-// use embedded_hal_async::i2c::I2c as I2cTrait;
+use embedded_batteries_async::smart_battery::{
+    self, BatteryModeFields, BatteryStatusFields, CapacityModeSignedValue, CapacityModeValue, DeciKelvin, ErrorCode,
+    SpecificationInfoFields,
+};
+use embedded_hal_async::i2c::I2c as I2cTrait;
 
-// #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-// #[cfg_attr(feature = "defmt-03", derive(defmt::Format))]
-// pub enum BQ25887Error<I2cError> {
-//     I2c(I2cError),
-//     BatteryStatus(ErrorCode),
-// }
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[cfg_attr(feature = "defmt-03", derive(defmt::Format))]
+pub enum BQ25887Error<I2cError> {
+    I2c(I2cError),
+    BatteryStatus(ErrorCode),
+}
 
 const LARGEST_REG_SIZE_BYTES: usize = 1;
 const LARGEST_CMD_SIZE_BYTES: usize = 1;
@@ -33,23 +33,119 @@ const LARGEST_BUF_SIZE_BYTES: usize = 1;
 
 const BQ_ADDR: u8 = 0x6Au8;
 
-// impl From<field_sets::BatteryStatus> for BatteryStatusFields {
-//     fn from(value: field_sets::BatteryStatus) -> Self {
-//         BatteryStatusFields::new()
-//             .with_error_code(value.ec())
-//     }
-// }
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+enum CapacityModeState {
+    Milliamps = 0,
+    Centiwatt = 1,
+}
 
 device_driver::create_device!(
     device_name: Bq25887,
     manifest: "src/bq25887.yaml"
 );
 
-// impl<E: embedded_hal_async::i2c::Error> smart_battery::Error for BQ25887Error<E> {
-//     fn kind(&self) -> smart_battery::ErrorKind {
-//         match self {
-//             Self::I2c(_) => smart_battery::ErrorKind::CommError,
-//             Self::BatteryStatus(e) => smart_battery::ErrorKind::BatteryStatus(*e),
-//         }
-//     }
-// }
+impl<E: embedded_hal_async::i2c::Error> smart_battery::Error for BQ25887Error<E> {
+    fn kind(&self) -> smart_battery::ErrorKind {
+        match self {
+            Self::I2c(_) => smart_battery::ErrorKind::CommError,
+            Self::BatteryStatus(e) => smart_battery::ErrorKind::BatteryStatus(*e),
+        }
+    }
+}
+
+impl<I2C: I2cTrait> device_driver::AsyncRegisterInterface for DeviceInterface<I2C> {
+    type Error = BQ25887Error<I2C::Error>;
+    type AddressType = u8;
+
+    async fn write_register(
+        &mut self,
+        address: Self::AddressType,
+        _size_bits: u32,
+        data: &[u8],
+    ) -> Result<(), Self::Error> {
+        let mut buf = [0u8; 1 + LARGEST_REG_SIZE_BYTES];
+        buf[0] = address;
+        buf[1..=data.len()].copy_from_slice(data);
+        self.i2c
+            .write(BQ_ADDR, &buf[..=data.len()])
+            .await
+            .map_err(BQ25887Error::I2c)
+    }
+
+    async fn read_register(
+        &mut self,
+        address: Self::AddressType,
+        _size_bits: u32,
+        data: &mut [u8],
+    ) -> Result<(), Self::Error> {
+        self.i2c
+            .write_read(BQ_ADDR, &[address], data)
+            .await
+            .map_err(BQ25887Error::I2c)
+    }
+}
+
+impl<I2C: I2cTrait> device_driver::BufferInterfaceError for DeviceInterface<I2C> {
+    type Error = BQ25887Error<I2C::Error>;
+}
+
+impl<I2C: I2cTrait> device_driver::AsyncBufferInterface for DeviceInterface<I2C> {
+    type AddressType = u8;
+
+    async fn read(&mut self, address: Self::AddressType, buf: &mut [u8]) -> Result<usize, Self::Error> {
+        self.i2c
+            .write_read(BQ_ADDR, &[address], buf)
+            .await
+            .map_err(BQ25887Error::I2c)?;
+        Ok(buf.len())
+    }
+
+    async fn write(&mut self, address: Self::AddressType, buf: &[u8]) -> Result<usize, Self::Error> {
+        let mut data = [0u8; 1 + LARGEST_BUF_SIZE_BYTES];
+        data[0] = address;
+        data[1..=buf.len()].copy_from_slice(buf);
+        self.i2c
+            .write(BQ_ADDR, &data[..=buf.len()])
+            .await
+            .map_err(BQ25887Error::I2c)?;
+        Ok(buf.len())
+    }
+
+    async fn flush(&mut self, _address: Self::AddressType) -> Result<(), Self::Error> {
+        Ok(())
+    }
+}
+
+/// BQ40Z50 interface, which takes an async I2C bus
+pub struct DeviceInterface<I2C: I2cTrait> {
+    /// embedded-hal-async compliant I2C bus
+    pub i2c: I2C,
+}
+
+/// High-level smart-battery driver for BQ25887
+pub struct Bq25887Driver<I2C: I2cTrait> {
+    device: Bq25887<DeviceInterface<I2C>>,
+    capacity_mode_state: Cell<CapacityModeState>,
+}
+
+impl<I2C: I2cTrait> Bq25887Driver<I2C> {
+    /// Create a new BQ25887 driver instance
+    pub fn new(i2c: I2C) -> Self {
+        Bq25887Driver {
+            device: Bq25887::new(DeviceInterface { i2c }),
+            capacity_mode_state: Cell::new(CapacityModeState::Milliamps),
+        }
+    }
+
+    fn set_capacity_mode_state(&self, battery_mode_fields: BatteryModeFields) {
+        self.capacity_mode_state.set(if battery_mode_fields.capacity_mode() {
+            CapacityModeState::Centiwatt
+        } else {
+            CapacityModeState::Milliamps
+        });
+    }
+}
+
+// Now copy and adapt the `smart_battery::SmartBattery` impl from your BQ40Z50 driver here,
+// replacing `self.device` calls to use `self.device` in Bq25887Driver and mapping register
+// calls to the methods auto-generated by `device_driver::create_device!`.
