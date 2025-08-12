@@ -23,6 +23,7 @@ const LARGEST_REG_SIZE_BITS: u32 = 0x08;
 const CHARGE_CURRENT_LIMIT_ADDR: u8 = 0x01;
 const INPUT_VOLTAGE_LIMIT_ADDR: u8 = 0x02;
 const INPUT_CURRENT_LIMIT_ADDR: u8 = 0x03;
+const PRECHARGE_AND_TERMINATION_CURRENT_ADDR: u8 = 0x04;
 
 const BQ_ADDR: u8 = 0x6A;
 
@@ -96,9 +97,9 @@ pub struct VoltageRegulationLimit {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 #[cfg_attr(feature = "defmt-03", derive(defmt::Format))]
 pub struct ChargeCurrentLimit {
-    pub en_hiz: B1,
-    pub en_ilim: B1,
     pub ichg: B6,
+    pub en_ilim: B1,
+    pub en_hiz: B1,
 }
 
 impl From<u8> for ChargeCurrentLimit {
@@ -122,10 +123,10 @@ impl From<ChargeCurrentLimit> for u8 {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 #[cfg_attr(feature = "defmt-03", derive(defmt::Format))]
 pub struct InputVoltageLimit {
-    pub en_vindpm_rst: B1,
-    pub en_bat_dischg: B1,
-    pub pfm_ooa_dis: B1,
     pub vindpm: B5,
+    pub pfm_ooa_dis: B1,
+    pub en_bat_dischg: B1,
+    pub en_vindpm_rst: B1,
 }
 
 impl From<u8> for InputVoltageLimit {
@@ -150,10 +151,10 @@ impl From<InputVoltageLimit> for u8 {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 #[cfg_attr(feature = "defmt-03", derive(defmt::Format))]
 pub struct InputCurrentLimit {
-    pub force_ico: B1,
-    pub force_indet: B1,
-    pub en_ico: B1,
     pub iindpm: B5,
+    pub en_ico: B1,
+    pub force_indet: B1,
+    pub force_ico: B1,
 }
 
 impl From<u8> for InputCurrentLimit {
@@ -173,6 +174,33 @@ impl From<InputCurrentLimit> for u8 {
         force_ico | force_indet | en_ico | iindpm
     }
 }
+
+#[bitfield]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "defmt-03", derive(defmt::Format))]
+pub struct PrechargeAndTerminationCurrentLimit {
+    pub iterm: B4,
+    pub iprechg: B4,
+    
+}
+
+impl From<u8> for PrechargeAndTerminationCurrentLimit {
+    fn from(byte: u8) -> Self {
+        let mut buf = [0u8; 1];
+        buf[0] = byte;
+        Self { bytes: buf }
+    }
+}
+
+impl From<PrechargeAndTerminationCurrentLimit> for u8 {
+    fn from(value: PrechargeAndTerminationCurrentLimit) -> Self {
+        let iprechg = (value.iprechg() & 0b0000_1111) << 4;
+        let iterm = value.iterm() & 0b0000_1111;
+        iprechg | iterm
+    }
+}
+
+// ------------------------------------------------------------------------------------
 
 impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     pub fn new(i2c: I2C) -> Self {
@@ -314,6 +342,36 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
         self.device
             .interface()
             .write_register(INPUT_CURRENT_LIMIT_ADDR, LARGEST_REG_SIZE_BITS, &buf)
+            .await?;
+        Ok(())
+    }
+
+    /// ### Breif
+    /// Reads Precharge and Termination Current Limit Register,
+    /// (Address = 0x04) [reset = 0x22]
+    /// BQ255887 p.37
+    /// ### Errors
+    /// Returns an error if the I²C transaction fails or the register value cannot be parsed
+    pub async fn read_precharge_and_termination_current_limit(&mut self) -> Result<PrechargeAndTerminationCurrentLimit, BQ25887Error<I2C::Error>>{
+        let reg = self.device.prechg_termination_ctrl().read_async().await?;
+        let iprechg:u8 = reg.iprechg()?.into();
+        let iterm:u8 = reg.iprechg()?.into();
+        let byte = ((iprechg << 4) & 0b1111_0000) | (iterm & 0b0000_1111);
+        Ok(byte.into())
+    }
+
+    /// ### Breif
+    /// Writes Precharge and Termination Current Limit Register,
+    /// (Address = 0x04) [reset = 0x22]
+    /// BQ255887 p.37
+    /// ### Errors
+    /// Returns an error if the I²C transaction fails
+    pub async fn write_precharge_and_termination_current_limit(&mut self, current_limit: PrechargeAndTerminationCurrentLimit) -> Result<(), BQ25887Error<I2C::Error>>{
+        let mut buf = [0u8; LARGEST_REG_SIZE_BYTES];
+        buf[0] = current_limit.into();
+        self.device
+            .interface()
+            .write_register(PRECHARGE_AND_TERMINATION_CURRENT_ADDR, LARGEST_REG_SIZE_BITS, &buf)
             .await?;
         Ok(())
     }
