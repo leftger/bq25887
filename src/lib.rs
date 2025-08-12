@@ -10,19 +10,19 @@
 
 #![doc = include_str!("../README.md")]
 #![cfg_attr(not(test), no_std)]
-#![allow(missing_docs, warnings)]
-use core::cell::Cell;
-#[cfg(feature = "defmt")]
+#![allow(missing_docs)]
+#[cfg(feature = "defmt-03")]
 use defmt::{Format, Formatter, write};
 use device_driver::AsyncRegisterInterface;
 use embedded_hal_async::i2c::I2c as I2cTrait;
+use modular_bitfield::prelude::*;
 
 const LARGEST_REG_SIZE_BYTES: usize = 0x01;
 const LARGEST_REG_SIZE_BITS: u32 = 0x08;
 
-const CHARGE_CURRENT_LIMIT_ADDR:u8 = 0x01; 
-const INPUT_VOLTAGE_LIMIT_ADDR:u8 = 0x02; 
-
+const CHARGE_CURRENT_LIMIT_ADDR: u8 = 0x01;
+const INPUT_VOLTAGE_LIMIT_ADDR: u8 = 0x02;
+const INPUT_CURRENT_LIMIT_ADDR: u8 = 0x03;
 
 const BQ_ADDR: u8 = 0x6A;
 
@@ -32,7 +32,7 @@ device_driver::create_device!(
 );
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+#[cfg_attr(feature = "defmt-03", derive(defmt::Format))]
 pub enum BQ25887Error<I2cError> {
     I2c(I2cError),
     Conversion(device_driver::ConversionError<u8>),
@@ -85,76 +85,93 @@ pub struct Bq25887Driver<I2C: I2cTrait> {
     device: Bq25887<DeviceInterface<I2C>>,
 }
 
-/// Cell Voltage Regulation Limit Register BQ25887 p.33
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+#[bitfield]
+#[derive(Default, Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "defmt-03", derive(defmt::Format))]
 pub struct VoltageRegulationLimit {
-    pub vcellreg: u8, //todo: Should create millivolt helper impl
+    pub vcellreg: B8, //todo: Should create millivolt helper impl
 }
 
-/// Charger Current Limit Register BQ25887 p.33
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+#[bitfield]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "defmt-03", derive(defmt::Format))]
 pub struct ChargeCurrentLimit {
-    pub en_hiz: bool,
-    pub en_ilim: bool,
-    pub ichg: u8, // todo: 6-bit value (0x00–0x3F), should be clamped by user
+    pub en_hiz: B1,
+    pub en_ilim: B1,
+    pub ichg: B6,
 }
 
 impl From<u8> for ChargeCurrentLimit {
     fn from(byte: u8) -> Self {
-        Self {
-            en_hiz: (byte & 0b1000_0000) != 0,
-            en_ilim: (byte & 0b0100_0000) != 0,
-            ichg: byte & 0b0011_1111,
-        }
+        let mut buf = [0u8; 1];
+        buf[0] = byte;
+        Self { bytes: buf }
     }
 }
 
 impl From<ChargeCurrentLimit> for u8 {
     fn from(val: ChargeCurrentLimit) -> Self {
-        let hiz = if val.en_hiz { 1 << 7 } else { 0 };
-        let ilim = if val.en_ilim { 1 << 6 } else { 0 };
-        let ichg = val.ichg & 0b0011_1111;
+        let hiz = if val.en_hiz() != 0 { 1 << 7 } else { 0 };
+        let ilim = if val.en_ilim() != 0 { 1 << 6 } else { 0 };
+        let ichg = val.ichg() & 0b0011_1111;
         hiz | ilim | ichg
     }
 }
 
-/// Input Voltage Limit Register BQ25887 p.35
-pub struct InputVoltageLimit{
-    pub en_vindpm_rst: bool,
-    pub en_bat_dischg: bool,
-    pub pfm_ooa_dis: bool,
-    pub vindpm: u8, //todo: 5 bit value (0x00-0x1F), should be clamped by user
+#[bitfield]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "defmt-03", derive(defmt::Format))]
+pub struct InputVoltageLimit {
+    pub en_vindpm_rst: B1,
+    pub en_bat_dischg: B1,
+    pub pfm_ooa_dis: B1,
+    pub vindpm: B5,
 }
 
 impl From<u8> for InputVoltageLimit {
     fn from(byte: u8) -> Self {
-        Self {
-            en_vindpm_rst: (byte & 0b1000_0000) != 0,
-            en_bat_dischg: (byte & 0b0100_0000) != 0,
-            pfm_ooa_dis: (byte & 0b0010_0000) != 0,
-            vindpm: byte & 0b0001_1111,
-        }
+        let mut buf = [0u8; 1];
+        buf[0] = byte;
+        Self { bytes: buf }
     }
 }
 
 impl From<InputVoltageLimit> for u8 {
     fn from(val: InputVoltageLimit) -> Self {
-        let en_vindpm_rst = if val.en_vindpm_rst { 1 << 7 } else { 0 };
-        let en_bat_dischg = if val.en_bat_dischg { 1 << 6 } else { 0 };
-        let pfm_ooa_dis = if val.pfm_ooa_dis { 1 << 5 } else { 0 };
-        let vindpm = val.vindpm & 0b0001_1111;
+        let en_vindpm_rst = if val.en_vindpm_rst() != 0 { 1 << 7 } else { 0 };
+        let en_bat_dischg = if val.en_bat_dischg() != 0 { 1 << 6 } else { 0 };
+        let pfm_ooa_dis = if val.pfm_ooa_dis() != 0 { 1 << 5 } else { 0 };
+        let vindpm = val.vindpm() & 0b0001_1111;
         en_vindpm_rst | en_bat_dischg | pfm_ooa_dis | vindpm
     }
 }
 
-/// Input Current Limit Register BQ25887 p.36
-pub struct InputCurrentLimit{
-    pub force_ico: bool,
-    pub force_indet: bool,
-    pub en_ico: bool,
-    pub iindpm: u8, //todo: 5 bit value (0x00-0x1F), should be clamped by user
+#[bitfield]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "defmt-03", derive(defmt::Format))]
+pub struct InputCurrentLimit {
+    pub force_ico: B1,
+    pub force_indet: B1,
+    pub en_ico: B1,
+    pub iindpm: B5,
+}
+
+impl From<u8> for InputCurrentLimit {
+    fn from(byte: u8) -> Self {
+        let mut buf = [0u8; 1];
+        buf[0] = byte;
+        Self { bytes: buf }
+    }
+}
+
+impl From<InputCurrentLimit> for u8 {
+    fn from(value: InputCurrentLimit) -> Self {
+        let force_ico = if value.force_ico() != 0 { 1 << 7 } else { 0 };
+        let force_indet = if value.force_indet() != 0 { 1 << 6 } else { 0 };
+        let en_ico = if value.en_ico() != 0 { 1 << 5 } else { 0 };
+        let iindpm = value.iindpm() & 0b0001_1111;
+        force_ico | force_indet | en_ico | iindpm
+    }
 }
 
 impl<I2C: I2cTrait> Bq25887Driver<I2C> {
@@ -172,10 +189,8 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     /// Returns an error if the I²C transaction fails or the register value cannot be parsed
     pub async fn read_voltage_regulation_limit(&mut self) -> Result<VoltageRegulationLimit, BQ25887Error<I2C::Error>> {
         let cell_voltage_limit = self.device.cell_voltage_limit().read_async().await?;
-        let return_val = VoltageRegulationLimit {
-            vcellreg: cell_voltage_limit.vcellreg(),
-        };
-        Ok(return_val)
+        let regulation_limit = VoltageRegulationLimit::new().with_vcellreg(cell_voltage_limit.vcellreg());
+        Ok(regulation_limit)
     }
 
     /// ### Breif
@@ -188,7 +203,7 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
         &mut self,
         volt_limit: VoltageRegulationLimit,
     ) -> Result<(), BQ25887Error<I2C::Error>> {
-        let raw_register_value: u8 = volt_limit.vcellreg;
+        let raw_register_value: u8 = volt_limit.vcellreg();
         self.device
             .cell_voltage_limit()
             .write_async(|reg| reg.set_vcellreg(raw_register_value))
@@ -218,11 +233,16 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     /// BQ25887 p.34
     /// ### Errors
     /// Returns an error if the I²C transaction fails
-    pub async fn write_charge_current_limit(&mut self, current_limit: ChargeCurrentLimit) -> Result<(), BQ25887Error<I2C::Error>> {
+    pub async fn write_charge_current_limit(
+        &mut self,
+        current_limit: ChargeCurrentLimit,
+    ) -> Result<(), BQ25887Error<I2C::Error>> {
         let mut buf = [0u8; LARGEST_REG_SIZE_BYTES];
-        let raw_register_value:u8 = current_limit.into();
-        buf[0] = raw_register_value;
-        self.device.interface().write_register(CHARGE_CURRENT_LIMIT_ADDR, LARGEST_REG_SIZE_BITS, &buf).await?;
+        buf[0] = current_limit.into();
+        self.device
+            .interface()
+            .write_register(CHARGE_CURRENT_LIMIT_ADDR, LARGEST_REG_SIZE_BITS, &buf)
+            .await?;
         Ok(())
     }
 
@@ -237,7 +257,7 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
         let en_vindpm_rst = u8::from(reg.en_vindpm_rst()) << 7;
         let en_bat_dischg = u8::from(reg.en_bat_dischg()) << 6;
         let pfm_ooa_dis = u8::from(reg.pfm_ooa_dis()) << 5;
-        let vindpm:u8 = reg.vindpm()?.into();
+        let vindpm: u8 = reg.vindpm()?.into();
 
         let byte = en_vindpm_rst | en_bat_dischg | pfm_ooa_dis | (vindpm & 0b0001_1111);
         Ok(byte.into())
@@ -249,23 +269,52 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     /// BQ25887 p.35
     /// ### Errors
     /// Returns an error if the I²C transaction fails
-    pub async fn write_input_voltage_limit(&mut self, input_volt_limit: InputVoltageLimit) -> Result<(), BQ25887Error<I2C::Error>> {
+    pub async fn write_input_voltage_limit(
+        &mut self,
+        input_volt_limit: InputVoltageLimit,
+    ) -> Result<(), BQ25887Error<I2C::Error>> {
         let mut buf = [0u8; LARGEST_REG_SIZE_BYTES];
-        let raw_register_value:u8 = input_volt_limit.into();
-        buf[0] = raw_register_value;
-        self.device.interface().write_register(INPUT_VOLTAGE_LIMIT_ADDR, LARGEST_REG_SIZE_BITS, &buf).await?;
+        buf[0] = input_volt_limit.into();
+        self.device
+            .interface()
+            .write_register(INPUT_VOLTAGE_LIMIT_ADDR, LARGEST_REG_SIZE_BITS, &buf)
+            .await?;
         Ok(())
     }
 
+    /// ### Breif
+    /// Reads Input Current Limit Register,
+    /// (Address = 0x03) (reset = 0x39 )
+    /// BQ255887 p.36
+    /// ### Errors
+    /// Returns an error if the I²C transaction fails or the register value cannot be parsed
+    pub async fn read_input_current_limit(&mut self) -> Result<InputCurrentLimit, BQ25887Error<I2C::Error>> {
+        let reg = self.device.input_current_limit().read_async().await?;
+        let force_ico = u8::from(reg.force_ico()) << 7;
+        let force_indet = u8::from(reg.force_indet()) << 6;
+        let en_ico = u8::from(reg.en_ico()) << 5;
+        let iindpm: u8 = reg.iindpm()?.into();
 
-    // pub async fn read_charger_status_1(&mut self) -> Result<u8, BQ25887Error<I2C::Error>> {
-    //     let reg = self.device.charger_status_1().read_async().await?;
-    //     let iindpm = u8::from(reg.iindpm_stat()) << 6;
-    //     let vindpm = u8::from(reg.vindpm_stat()) << 5;
-    //     let treg = u8::from(reg.treg_stat()) << 4;
-    //     let wd_stat = u8::from(reg.wd_stat()) << 3;
-    //     let charge_stat: u8 = reg.chrg_stat().into();
-    //     let byte = iindpm | vindpm | treg | wd_stat | (charge_stat & 0b111);
-    //     Ok(byte)
-    // }
+        let byte = force_ico | force_indet | en_ico | (iindpm & 0b0001_1111);
+        Ok(byte.into())
+    }
+
+    /// ### Breif
+    /// Writes Input Current Limit Register,
+    /// (Address = 0x03) (reset = 0x39 )
+    /// BQ255887 p.36
+    /// ### Errors
+    /// Returns an error if the I²C transaction fails
+    pub async fn write_input_current_limit(
+        &mut self,
+        current_limit: InputCurrentLimit,
+    ) -> Result<(), BQ25887Error<I2C::Error>> {
+        let mut buf = [0u8; LARGEST_REG_SIZE_BYTES];
+        buf[0] = current_limit.into();
+        self.device
+            .interface()
+            .write_register(INPUT_CURRENT_LIMIT_ADDR, LARGEST_REG_SIZE_BITS, &buf)
+            .await?;
+        Ok(())
+    }
 }

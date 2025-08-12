@@ -42,7 +42,7 @@ pedantic = "deny"
 
 [features]
 default = []
-defmt = [
+defmt-03 = [
     "dep:defmt",
     "device-driver/defmt-03",
 ]
