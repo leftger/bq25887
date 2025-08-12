@@ -102,23 +102,6 @@ pub struct ChargeCurrentLimit {
     pub en_hiz: B1,
 }
 
-impl From<u8> for ChargeCurrentLimit {
-    fn from(byte: u8) -> Self {
-        let mut buf = [0u8; 1];
-        buf[0] = byte;
-        Self { bytes: buf }
-    }
-}
-
-impl From<ChargeCurrentLimit> for u8 {
-    fn from(val: ChargeCurrentLimit) -> Self {
-        let hiz = if val.en_hiz() != 0 { 1 << 7 } else { 0 };
-        let ilim = if val.en_ilim() != 0 { 1 << 6 } else { 0 };
-        let ichg = val.ichg() & 0b0011_1111;
-        hiz | ilim | ichg
-    }
-}
-
 #[bitfield]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 #[cfg_attr(feature = "defmt-03", derive(defmt::Format))]
@@ -127,24 +110,6 @@ pub struct InputVoltageLimit {
     pub pfm_ooa_dis: B1,
     pub en_bat_dischg: B1,
     pub en_vindpm_rst: B1,
-}
-
-impl From<u8> for InputVoltageLimit {
-    fn from(byte: u8) -> Self {
-        let mut buf = [0u8; 1];
-        buf[0] = byte;
-        Self { bytes: buf }
-    }
-}
-
-impl From<InputVoltageLimit> for u8 {
-    fn from(val: InputVoltageLimit) -> Self {
-        let en_vindpm_rst = if val.en_vindpm_rst() != 0 { 1 << 7 } else { 0 };
-        let en_bat_dischg = if val.en_bat_dischg() != 0 { 1 << 6 } else { 0 };
-        let pfm_ooa_dis = if val.pfm_ooa_dis() != 0 { 1 << 5 } else { 0 };
-        let vindpm = val.vindpm() & 0b0001_1111;
-        en_vindpm_rst | en_bat_dischg | pfm_ooa_dis | vindpm
-    }
 }
 
 #[bitfield]
@@ -157,24 +122,6 @@ pub struct InputCurrentLimit {
     pub force_ico: B1,
 }
 
-impl From<u8> for InputCurrentLimit {
-    fn from(byte: u8) -> Self {
-        let mut buf = [0u8; 1];
-        buf[0] = byte;
-        Self { bytes: buf }
-    }
-}
-
-impl From<InputCurrentLimit> for u8 {
-    fn from(value: InputCurrentLimit) -> Self {
-        let force_ico = if value.force_ico() != 0 { 1 << 7 } else { 0 };
-        let force_indet = if value.force_indet() != 0 { 1 << 6 } else { 0 };
-        let en_ico = if value.en_ico() != 0 { 1 << 5 } else { 0 };
-        let iindpm = value.iindpm() & 0b0001_1111;
-        force_ico | force_indet | en_ico | iindpm
-    }
-}
-
 #[bitfield]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 #[cfg_attr(feature = "defmt-03", derive(defmt::Format))]
@@ -184,20 +131,16 @@ pub struct PrechargeAndTerminationCurrentLimit {
     
 }
 
-impl From<u8> for PrechargeAndTerminationCurrentLimit {
-    fn from(byte: u8) -> Self {
-        let mut buf = [0u8; 1];
-        buf[0] = byte;
-        Self { bytes: buf }
-    }
-}
-
-impl From<PrechargeAndTerminationCurrentLimit> for u8 {
-    fn from(value: PrechargeAndTerminationCurrentLimit) -> Self {
-        let iprechg = (value.iprechg() & 0b0000_1111) << 4;
-        let iterm = value.iterm() & 0b0000_1111;
-        iprechg | iterm
-    }
+#[bitfield]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "defmt-03", derive(defmt::Format))]
+pub struct ChargerControl1{
+    pub tmr2x_en: B1,
+    pub chg_timer: B2,
+    pub en_timer: B1,
+    pub watchdog: B2,
+    pub stat_dis: B1,
+    pub en_term: B1,
 }
 
 // ------------------------------------------------------------------------------------
@@ -252,7 +195,7 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
 
         let byte = (en_hiz) | (en_ilim) | (ichg & 0b0011_1111);
 
-        Ok(byte.into())
+        Ok(ChargeCurrentLimit::from_bytes([byte]))
     }
 
     /// ### Breif
@@ -266,7 +209,7 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
         current_limit: ChargeCurrentLimit,
     ) -> Result<(), BQ25887Error<I2C::Error>> {
         let mut buf = [0u8; LARGEST_REG_SIZE_BYTES];
-        buf[0] = current_limit.into();
+        buf[0] = current_limit.bytes[0];
         self.device
             .interface()
             .write_register(CHARGE_CURRENT_LIMIT_ADDR, LARGEST_REG_SIZE_BITS, &buf)
@@ -288,7 +231,8 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
         let vindpm: u8 = reg.vindpm()?.into();
 
         let byte = en_vindpm_rst | en_bat_dischg | pfm_ooa_dis | (vindpm & 0b0001_1111);
-        Ok(byte.into())
+
+        Ok(InputVoltageLimit::from_bytes([byte]))
     }
 
     /// ### Breif
@@ -302,7 +246,7 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
         input_volt_limit: InputVoltageLimit,
     ) -> Result<(), BQ25887Error<I2C::Error>> {
         let mut buf = [0u8; LARGEST_REG_SIZE_BYTES];
-        buf[0] = input_volt_limit.into();
+        buf[0] = input_volt_limit.bytes[0];
         self.device
             .interface()
             .write_register(INPUT_VOLTAGE_LIMIT_ADDR, LARGEST_REG_SIZE_BITS, &buf)
@@ -324,7 +268,7 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
         let iindpm: u8 = reg.iindpm()?.into();
 
         let byte = force_ico | force_indet | en_ico | (iindpm & 0b0001_1111);
-        Ok(byte.into())
+        Ok(InputCurrentLimit::from_bytes([byte]))
     }
 
     /// ### Breif
@@ -338,7 +282,7 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
         current_limit: InputCurrentLimit,
     ) -> Result<(), BQ25887Error<I2C::Error>> {
         let mut buf = [0u8; LARGEST_REG_SIZE_BYTES];
-        buf[0] = current_limit.into();
+        buf[0] = current_limit.into_bytes()[0];
         self.device
             .interface()
             .write_register(INPUT_CURRENT_LIMIT_ADDR, LARGEST_REG_SIZE_BITS, &buf)
@@ -357,7 +301,7 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
         let iprechg:u8 = reg.iprechg()?.into();
         let iterm:u8 = reg.iprechg()?.into();
         let byte = ((iprechg << 4) & 0b1111_0000) | (iterm & 0b0000_1111);
-        Ok(byte.into())
+        Ok(PrechargeAndTerminationCurrentLimit::from_bytes([byte]))
     }
 
     /// ### Breif
@@ -368,7 +312,7 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     /// Returns an error if the I²C transaction fails
     pub async fn write_precharge_and_termination_current_limit(&mut self, current_limit: PrechargeAndTerminationCurrentLimit) -> Result<(), BQ25887Error<I2C::Error>>{
         let mut buf = [0u8; LARGEST_REG_SIZE_BYTES];
-        buf[0] = current_limit.into();
+        buf[0] = current_limit.bytes[0];
         self.device
             .interface()
             .write_register(PRECHARGE_AND_TERMINATION_CURRENT_ADDR, LARGEST_REG_SIZE_BITS, &buf)
