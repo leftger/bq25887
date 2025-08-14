@@ -20,10 +20,13 @@ use modular_bitfield::prelude::*;
 const LARGEST_REG_SIZE_BYTES: usize = 0x01;
 const LARGEST_REG_SIZE_BITS: u32 = 0x08;
 
+//todo change to enum
 const CHARGE_CURRENT_LIMIT_ADDR: u8 = 0x01;
 const INPUT_VOLTAGE_LIMIT_ADDR: u8 = 0x02;
 const INPUT_CURRENT_LIMIT_ADDR: u8 = 0x03;
 const PRECHARGE_AND_TERMINATION_CURRENT_ADDR: u8 = 0x04;
+const CHARGER_CONTROL_1_ADDR: u8 = 0x05;
+const CHARGER_CONTROL_2_ADDR: u8 = 0x06;
 
 const BQ_ADDR: u8 = 0x6A;
 
@@ -141,6 +144,19 @@ pub struct ChargerControl1{
     pub watchdog: B2,
     pub stat_dis: B1,
     pub en_term: B1,
+}
+
+#[bitfield]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "defmt-03", derive(defmt::Format))]
+pub struct ChargerControl2{
+    pub vrechg: B2,
+    pub celllowv: B1,
+    pub en_chg: B1,
+    pub treg: B2,
+    pub auto_indet_en: B1,
+    #[skip(setters, getters)]
+    reseved: B1,
 }
 
 // ------------------------------------------------------------------------------------
@@ -316,6 +332,75 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
         self.device
             .interface()
             .write_register(PRECHARGE_AND_TERMINATION_CURRENT_ADDR, LARGEST_REG_SIZE_BITS, &buf)
+            .await?;
+        Ok(())
+    }
+
+    /// ### Breif
+    /// Reads Charger Control 1 Register,
+    /// (Address = 0x05) (reset = 0x9D)
+    /// BQ255887 p.38
+    /// ### Errors
+    /// Returns an error if the I²C transaction fails
+    pub async fn read_charger_control_1(&mut self) -> Result<ChargerControl1, BQ25887Error<I2C::Error>>{
+        let reg = self.device.charger_ctrl_1().read_async().await?;
+        let en_term = u8::from(reg.en_term()) << 7;
+        let stat_dis = u8::from(reg.stat_dis()) << 6;
+        let watchdog: u8 = reg.watchdog().into();
+        let en_timer = u8::from(reg.en_timer()) << 3;
+        let chg_timer : u8 = reg.chg_timer().into();
+        let tmr2x_en = u8::from(reg.tmr_2_x_en());
+
+        let byte = en_term | stat_dis | ((watchdog << 4) & 0b0011_0000) | en_timer | ((chg_timer << 1) & 0b0000_0110) | tmr2x_en;
+        Ok(ChargerControl1::from_bytes([byte])) 
+    }
+
+    /// ### Breif
+    /// Writes Charger Control 1 Register,
+    /// (Address = 0x05) (reset = 0x9D)
+    /// BQ255887 p.38
+    /// ### Errors
+    /// Returns an error if the I²C transaction fails
+    pub async fn write_charger_control_1(&mut self, control: ChargerControl1) -> Result<(), BQ25887Error<I2C::Error>>{
+        let mut buf = [0u8; LARGEST_REG_SIZE_BYTES];
+        buf[0] = control.bytes[0];
+        self.device
+            .interface()
+            .write_register(CHARGER_CONTROL_1_ADDR, LARGEST_REG_SIZE_BITS, &buf)
+            .await?;
+        Ok(())
+    }
+
+    /// ### Breif
+    /// Reads Charger Control 2 Register,
+    /// (Address = 0x06) (reset = 0x7D)
+    /// BQ255887 p.39
+    /// ### Errors
+    /// Returns an error if the I²C transaction fails
+    pub async fn read_charger_control_2(&mut self) -> Result<ChargerControl2, BQ25887Error<I2C::Error>>{
+        let reg = self.device.charger_ctrl_2().read_async().await?;
+        let auto_indet_en = u8::from(reg.auto_indet_en()) << 6;
+        let treg: u8 = reg.treg().into();
+        let en_chg = u8::from(reg.en_chg()) << 3;
+        let celllowv = u8::from(reg.celllowv()) << 2;
+        let vrechg: u8 = reg.vcell_rechg().into();
+
+        let byte = auto_indet_en | (treg << 4) & 0b0011_0000 | en_chg | celllowv | vrechg;
+        Ok(ChargerControl2::from_bytes([byte]))
+    }
+
+    /// ### Breif
+    /// Write Charger Control 2 Register,
+    /// (Address = 0x06) (reset = 0x7D)
+    /// BQ255887 p.39
+    /// ### Errors
+    /// Returns an error if the I²C transaction fails
+    pub async fn write_charger_control_2(&mut self, control: ChargerControl2) -> Result<(), BQ25887Error<I2C::Error>>{
+        let mut buf = [0u8; LARGEST_REG_SIZE_BYTES];
+        buf[0] = control.bytes[0];
+        self.device
+            .interface()
+            .write_register(CHARGER_CONTROL_2_ADDR, LARGEST_REG_SIZE_BITS, &buf)
             .await?;
         Ok(())
     }
