@@ -27,6 +27,10 @@ const INPUT_CURRENT_LIMIT_ADDR: u8 = 0x03;
 const PRECHARGE_AND_TERMINATION_CURRENT_ADDR: u8 = 0x04;
 const CHARGER_CONTROL_1_ADDR: u8 = 0x05;
 const CHARGER_CONTROL_2_ADDR: u8 = 0x06;
+const CHARGER_CONTROL_3_ADDR: u8 = 0x07;
+const CHARGER_CONTROL_4_ADDR: u8 = 0x08;
+const CHARGER_MASK_1_ADDR: u8 = 0x12;
+const CHARGER_MASK_2_ADDR: u8 = 0x13;
 
 const BQ_ADDR: u8 = 0x6A;
 
@@ -131,13 +135,12 @@ pub struct InputCurrentLimit {
 pub struct PrechargeAndTerminationCurrentLimit {
     pub iterm: B4,
     pub iprechg: B4,
-    
 }
 
 #[bitfield]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 #[cfg_attr(feature = "defmt-03", derive(defmt::Format))]
-pub struct ChargerControl1{
+pub struct ChargerControl1 {
     pub tmr2x_en: B1,
     pub chg_timer: B2,
     pub en_timer: B1,
@@ -149,7 +152,7 @@ pub struct ChargerControl1{
 #[bitfield]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 #[cfg_attr(feature = "defmt-03", derive(defmt::Format))]
-pub struct ChargerControl2{
+pub struct ChargerControl2 {
     pub vrechg: B2,
     pub celllowv: B1,
     pub en_chg: B1,
@@ -157,6 +160,190 @@ pub struct ChargerControl2{
     pub auto_indet_en: B1,
     #[skip(setters, getters)]
     reseved: B1,
+}
+
+#[bitfield]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "defmt-03", derive(defmt::Format))]
+pub struct ChargerControl3 {
+    #[skip(setters, getters)]
+    reserved: B4,
+    pub topoff_timer: B2,
+    pub wd_rst: B1,
+    pub pfm_dis: B1,
+}
+
+#[bitfield]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "defmt-03", derive(defmt::Format))]
+pub struct ChargerControl4 {
+    pub jeita_isetc: B2,
+    pub jeita_iseth: B1,
+    pub jeita_vset: B2,
+    #[skip(setters, getters)]
+    reserved: B3,
+}
+
+#[bitfield]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "defmt-03", derive(defmt::Format))]
+pub struct IcoCurrentLimitInUse {
+    #[skip(setters)]
+    pub ico_ilim: B5,
+    #[skip(setters, getters)]
+    reserved: B3,
+}
+
+#[bitfield]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "defmt-03", derive(defmt::Format))]
+pub struct ChargerStatus1 {
+    #[skip(setters)]
+    pub chrg_stat: B3,
+    #[skip(setters)]
+    pub wd_stat: B1,
+    #[skip(setters)]
+    pub treg_stat: B1,
+    #[skip(setters)]
+    pub vindpm_stat: B1,
+    #[skip(setters)]
+    pub iindpm_stat: B1,
+    #[skip(setters, getters)]
+    reserved: B1,
+}
+
+#[bitfield]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "defmt-03", derive(defmt::Format))]
+pub struct ChargerStatus2 {
+    #[skip(setters, getters)]
+    reserved_1: B1,
+    #[skip(setters)]
+    pub ico_stat: B2,
+    #[skip(setters, getters)]
+    reserved_2: B1,
+    #[skip(setters)]
+    pub vbus_stat: B3,
+    #[skip(setters)]
+    pub pg_stat: B1,
+}
+
+#[bitfield]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "defmt-03", derive(defmt::Format))]
+pub struct NTCStatus {
+    #[skip(setters)]
+    pub ts_stat: B3,
+    #[skip(setters, getters)]
+    reserved: B5,
+}
+
+#[bitfield]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "defmt-03", derive(defmt::Format))]
+pub struct FaultStatus {
+    #[skip(setters, getters)]
+    reserved_1: B1,
+    #[skip(setters, getters)]
+    reserved_2: B3,
+    #[skip(setters)]
+    pub tmr_stat: B1,
+    #[skip(setters, getters)]
+    reserved_3: B1,
+    #[skip(setters)]
+    pub tshut_stat: B1,
+    #[skip(setters)]
+    pub vbus_ovp_stat: B1,
+}
+
+#[bitfield]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "defmt-03", derive(defmt::Format))]
+pub struct ChargerFlag1 {
+    #[skip(setters)]
+    pub chrg_flag: B1,
+    #[skip(setters, getters)]
+    reserved_1: B2,
+    #[skip(setters)]
+    pub wd_flag: B1,
+    #[skip(setters)]
+    pub treg_flag: B1,
+    #[skip(setters)]
+    pub vindpm_flag: B1,
+    #[skip(setters)]
+    pub iindpm_flag: B1,
+    #[skip(setters, getters)]
+    reserved_2: B1,
+}
+
+#[bitfield]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "defmt-03", derive(defmt::Format))]
+pub struct ChargerFlag2 {
+    #[skip(setters, getters)]
+    reserved_1: B1,
+    #[skip(setters)]
+    pub ico_flag: B1,
+    #[skip(setters)]
+    pub ts_flag: B1,
+    #[skip(setters, getters)]
+    reserved_2: B1,
+    #[skip(setters)]
+    pub vbus_flag: B1,
+    #[skip(setters, getters)]
+    reserved_3: B2,
+    #[skip(setters)]
+    pub pg_flag: B1,
+}
+
+#[bitfield]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "defmt-03", derive(defmt::Format))]
+pub struct FaultFlag {
+    #[skip(setters, getters)]
+    reserved_1: B4,
+    #[skip(setters)]
+    pub tmr_flag: B1,
+    #[skip(setters, getters)]
+    reserved_2: B1,
+    #[skip(setters)]
+    pub tshut_flag: B1,
+    #[skip(setters)]
+    pub vbus_ovp_flag: B1,
+}
+
+#[bitfield]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "defmt-03", derive(defmt::Format))]
+pub struct ChargerMask1 {
+    pub chrg_mask: B1,
+    #[skip(setters, getters)]
+    reserved: B2,
+    pub wd_mask: B1,
+    pub treg_mask: B1,
+    pub vinpdm_mask: B1,
+    pub iindpm_mask: B1,
+    pub adc_done_mask: B1,
+}
+
+#[bitfield]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "defmt-03", derive(defmt::Format))]
+pub struct ChargerMask2 {
+    #[skip(setters, getters)]
+    reserved_1: B1,
+    #[skip(setters)]
+    pub ico_mask: B1,
+    #[skip(setters)]
+    pub ts_mask: B1,
+    #[skip(setters, getters)]
+    reserved_2: B1,
+    #[skip(setters)]
+    pub vbus_mask: B1,
+    #[skip(setters, getters)]
+    reserved_3: B2,
+    #[skip(setters)]
+    pub pg_mask: B1,
 }
 
 // ------------------------------------------------------------------------------------
@@ -312,10 +499,13 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     /// BQ255887 p.37
     /// ### Errors
     /// Returns an error if the I²C transaction fails or the register value cannot be parsed
-    pub async fn read_precharge_and_termination_current_limit(&mut self) -> Result<PrechargeAndTerminationCurrentLimit, BQ25887Error<I2C::Error>>{
+    pub async fn read_precharge_and_termination_current_limit(
+        &mut self,
+    ) -> Result<PrechargeAndTerminationCurrentLimit, BQ25887Error<I2C::Error>> {
         let reg = self.device.prechg_termination_ctrl().read_async().await?;
-        let iprechg:u8 = reg.iprechg()?.into();
-        let iterm:u8 = reg.iprechg()?.into();
+
+        let iprechg: u8 = reg.iprechg()?.into();
+        let iterm: u8 = reg.iprechg()?.into();
         let byte = ((iprechg << 4) & 0b1111_0000) | (iterm & 0b0000_1111);
         Ok(PrechargeAndTerminationCurrentLimit::from_bytes([byte]))
     }
@@ -326,7 +516,10 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     /// BQ255887 p.37
     /// ### Errors
     /// Returns an error if the I²C transaction fails
-    pub async fn write_precharge_and_termination_current_limit(&mut self, current_limit: PrechargeAndTerminationCurrentLimit) -> Result<(), BQ25887Error<I2C::Error>>{
+    pub async fn write_precharge_and_termination_current_limit(
+        &mut self,
+        current_limit: PrechargeAndTerminationCurrentLimit,
+    ) -> Result<(), BQ25887Error<I2C::Error>> {
         let mut buf = [0u8; LARGEST_REG_SIZE_BYTES];
         buf[0] = current_limit.bytes[0];
         self.device
@@ -342,17 +535,23 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     /// BQ255887 p.38
     /// ### Errors
     /// Returns an error if the I²C transaction fails
-    pub async fn read_charger_control_1(&mut self) -> Result<ChargerControl1, BQ25887Error<I2C::Error>>{
+    pub async fn read_charger_control_1(&mut self) -> Result<ChargerControl1, BQ25887Error<I2C::Error>> {
         let reg = self.device.charger_ctrl_1().read_async().await?;
+
         let en_term = u8::from(reg.en_term()) << 7;
         let stat_dis = u8::from(reg.stat_dis()) << 6;
         let watchdog: u8 = reg.watchdog().into();
         let en_timer = u8::from(reg.en_timer()) << 3;
-        let chg_timer : u8 = reg.chg_timer().into();
+        let chg_timer: u8 = reg.chg_timer().into();
         let tmr2x_en = u8::from(reg.tmr_2_x_en());
 
-        let byte = en_term | stat_dis | ((watchdog << 4) & 0b0011_0000) | en_timer | ((chg_timer << 1) & 0b0000_0110) | tmr2x_en;
-        Ok(ChargerControl1::from_bytes([byte])) 
+        let byte = en_term
+            | stat_dis
+            | ((watchdog << 4) & 0b0011_0000)
+            | en_timer
+            | ((chg_timer << 1) & 0b0000_0110)
+            | tmr2x_en;
+        Ok(ChargerControl1::from_bytes([byte]))
     }
 
     /// ### Breif
@@ -361,7 +560,7 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     /// BQ255887 p.38
     /// ### Errors
     /// Returns an error if the I²C transaction fails
-    pub async fn write_charger_control_1(&mut self, control: ChargerControl1) -> Result<(), BQ25887Error<I2C::Error>>{
+    pub async fn write_charger_control_1(&mut self, control: ChargerControl1) -> Result<(), BQ25887Error<I2C::Error>> {
         let mut buf = [0u8; LARGEST_REG_SIZE_BYTES];
         buf[0] = control.bytes[0];
         self.device
@@ -377,15 +576,16 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     /// BQ255887 p.39
     /// ### Errors
     /// Returns an error if the I²C transaction fails
-    pub async fn read_charger_control_2(&mut self) -> Result<ChargerControl2, BQ25887Error<I2C::Error>>{
+    pub async fn read_charger_control_2(&mut self) -> Result<ChargerControl2, BQ25887Error<I2C::Error>> {
         let reg = self.device.charger_ctrl_2().read_async().await?;
+
         let auto_indet_en = u8::from(reg.auto_indet_en()) << 6;
         let treg: u8 = reg.treg().into();
         let en_chg = u8::from(reg.en_chg()) << 3;
         let celllowv = u8::from(reg.celllowv()) << 2;
         let vrechg: u8 = reg.vcell_rechg().into();
 
-        let byte = auto_indet_en | (treg << 4) & 0b0011_0000 | en_chg | celllowv | vrechg;
+        let byte = auto_indet_en | ((treg << 4) & 0b0011_0000) | en_chg | celllowv | (vrechg & 0b0000_0011);
         Ok(ChargerControl2::from_bytes([byte]))
     }
 
@@ -395,12 +595,287 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     /// BQ255887 p.39
     /// ### Errors
     /// Returns an error if the I²C transaction fails
-    pub async fn write_charger_control_2(&mut self, control: ChargerControl2) -> Result<(), BQ25887Error<I2C::Error>>{
+    pub async fn write_charger_control_2(&mut self, control: ChargerControl2) -> Result<(), BQ25887Error<I2C::Error>> {
         let mut buf = [0u8; LARGEST_REG_SIZE_BYTES];
         buf[0] = control.bytes[0];
         self.device
             .interface()
             .write_register(CHARGER_CONTROL_2_ADDR, LARGEST_REG_SIZE_BITS, &buf)
+            .await?;
+        Ok(())
+    }
+
+    /// ### Breif
+    /// Reads Charger Control 3 Register,
+    /// (Address = 0x07) (reset = 0x00)
+    /// BQ255887 p.40
+    /// ### Errors
+    /// Returns an error if the I²C transaction fails
+    pub async fn read_charger_control_3(&mut self) -> Result<ChargerControl3, BQ25887Error<I2C::Error>> {
+        let reg = self.device.charger_ctrl_3().read_async().await?;
+
+        let pfm_dis = u8::from(reg.pfm_dis()) << 7;
+        let wd_rst = u8::from(reg.wd_rst()) << 6;
+        let topoff_timer: u8 = reg.topoff_timer().into();
+
+        let byte = pfm_dis | wd_rst | ((topoff_timer << 4) & 0b0011_0000);
+        Ok(ChargerControl3::from_bytes([byte]))
+    }
+
+    /// ### Breif
+    /// Writes Charger Control 3 Register,
+    /// (Address = 0x07) (reset = 0x00)
+    /// BQ255887 p.40
+    /// ### Errors
+    /// Returns an error if the I²C transaction fails
+    pub async fn write_charger_control_3(&mut self, control: ChargerControl3) -> Result<(), BQ25887Error<I2C::Error>> {
+        let mut buf = [0u8; LARGEST_REG_SIZE_BYTES];
+        buf[0] = control.bytes[0];
+        self.device
+            .interface()
+            .write_register(CHARGER_CONTROL_3_ADDR, LARGEST_REG_SIZE_BITS, &buf)
+            .await?;
+        Ok(())
+    }
+
+    /// ### Breif
+    /// Reads Charger Control 4 Register,
+    /// (Address = 0x08) (reset = 0x0D)
+    /// BQ255887 p.41
+    /// ### Errors
+    /// Returns an error if the I²C transaction fails
+    pub async fn read_charger_control_4(&mut self) -> Result<ChargerControl4, BQ25887Error<I2C::Error>> {
+        let reg = self.device.charger_ctrl_4().read_async().await?;
+
+        let vset: u8 = reg.jeita_vset().into();
+        let iseth = u8::from(reg.jeita_isetc()) << 2;
+        let isetcurr: u8 = reg.jeita_isetc().into();
+
+        let byte = ((vset << 3) & 0b0001_1000) | iseth | (isetcurr & 0b0000_0011);
+        Ok(ChargerControl4::from_bytes([byte]))
+    }
+
+    /// ### Breif
+    /// Writes Charger Control 4 Register,
+    /// (Address = 0x08) (reset = 0x0D)
+    /// BQ255887 p.41
+    /// ### Errors
+    /// Returns an error if the I²C transaction fails
+    pub async fn write_charger_control_4(&mut self, control: ChargerControl4) -> Result<(), BQ25887Error<I2C::Error>> {
+        let mut buf = [0u8; LARGEST_REG_SIZE_BYTES];
+        buf[0] = control.bytes[0];
+        self.device
+            .interface()
+            .write_register(CHARGER_CONTROL_4_ADDR, LARGEST_REG_SIZE_BITS, &buf)
+            .await?;
+        Ok(())
+    }
+
+    /// ### Breif
+    /// Reads ICO Current Limit in Use Register,
+    /// (Address = 0x0A) (reset = 0x??)
+    /// BQ255887 p.43
+    /// ### Errors
+    /// Returns an error if the I²C transaction fails
+    pub async fn read_ico_current_limit_in_use(&mut self) -> Result<IcoCurrentLimitInUse, BQ25887Error<I2C::Error>> {
+        let reg = self.device.ico_current_limit().read_async().await?;
+
+        Ok(IcoCurrentLimitInUse::from_bytes([reg.ico_ilim()]))
+    }
+
+    /// ### Breif
+    /// Reads Charger Status 1 Register,
+    /// (Address = 0x0B) [reset = 0x??]
+    /// BQ255887 p.44
+    /// ### Errors
+    /// Returns an error if the I²C transaction fails
+    pub async fn read_charger_status_1(&mut self) -> Result<ChargerStatus1, BQ25887Error<I2C::Error>> {
+        let reg = self.device.charger_status_1().read_async().await?;
+
+        let iindpm_stat = u8::from(reg.iindpm_stat()) << 6;
+        let vindpm_stat = u8::from(reg.vindpm_stat()) << 5;
+        let treg_stat = u8::from(reg.treg_stat()) << 4;
+        let wd_stat = u8::from(reg.wd_stat()) << 3;
+        let chrg_stat: u8 = reg.chrg_stat().into();
+
+        let byte = iindpm_stat | vindpm_stat | treg_stat | wd_stat | (chrg_stat & 0b0000_0111);
+
+        Ok(ChargerStatus1::from_bytes([byte]))
+    }
+
+    /// ### Breif
+    /// Reads Charger Status 2 Register,
+    /// (Address = 0x0C) [reset = 0x??]
+    /// BQ255887 p.45
+    /// ### Errors
+    /// Returns an error if the I²C transaction fails
+    pub async fn read_charger_status_2(&mut self) -> Result<ChargerStatus2, BQ25887Error<I2C::Error>> {
+        let reg = self.device.charger_status_2().read_async().await?;
+
+        let pg_stat = u8::from(reg.pg_stat()) << 7;
+        let vbus_stat: u8 = reg.vbus_stat().into();
+        let ico_stat: u8 = reg.ico_stat().into();
+
+        let byte = pg_stat | ((vbus_stat << 4) & 0b0111_0000) | ((ico_stat << 1) & 0b0000_0110);
+
+        Ok(ChargerStatus2::from_bytes([byte]))
+    }
+
+    /// ### Breif
+    /// Reads NTC Status Register,
+    /// (Address = 0x0D) [reset = 0x??]
+    /// BQ255887 p.46
+    /// ### Errors
+    /// Returns an error if the I²C transaction fails
+    pub async fn read_ntc_status(&mut self) -> Result<NTCStatus, BQ25887Error<I2C::Error>> {
+        let reg = self.device.ntc_status().read_async().await?;
+
+        let ts_stat: u8 = reg.ts_stat()?.into();
+        Ok(NTCStatus::from_bytes([ts_stat]))
+    }
+
+    /// ### Breif
+    /// Reads FAULT Status Register,
+    /// (Address = 0x0E) [reset = 0x??]
+    /// BQ255887 p.47
+    /// ### Errors
+    /// Returns an error if the I²C transaction fails
+    pub async fn read_fault_status(&mut self) -> Result<FaultStatus, BQ25887Error<I2C::Error>> {
+        let reg = self.device.fault_status().read_async().await?;
+
+        let vbus_ovp_stat = u8::from(reg.vbus_ovp_stat()) << 7;
+        let tshut_stat = u8::from(reg.tshut_stat()) << 6;
+        let tmr_stat = u8::from(reg.tmr_stat()) << 4;
+
+        let byte = vbus_ovp_stat | tshut_stat | tmr_stat;
+        Ok(FaultStatus::from_bytes([byte]))
+    }
+
+    /// ### Breif
+    /// Reads  Charger Flag 1 Register,
+    /// (Address = 0x0F) [reset = 0x??]
+    /// BQ255887 p.48
+    /// ### Errors
+    /// Returns an error if the I²C transaction fails
+    pub async fn read_charger_flag_1(&mut self) -> Result<ChargerFlag1, BQ25887Error<I2C::Error>> {
+        let reg = self.device.charger_flag_1().read_async().await?;
+
+        let iindpm = u8::from(reg.iindpm_flag()) << 6;
+        let vindpm = u8::from(reg.vindpm_flag()) << 5;
+        let treg = u8::from(reg.treg_flag()) << 4;
+        let wd = u8::from(reg.wd_flag()) << 3;
+        let chrg = u8::from(reg.chrg_flag());
+
+        let byte = iindpm | vindpm | treg | wd | chrg;
+        Ok(ChargerFlag1::from_bytes([byte]))
+    }
+
+    /// ### Breif
+    /// Reads  Charger Flag 2 Register,
+    /// (Address = 0x10) [reset = 0x??]
+    /// BQ255887 p.49
+    /// ### Errors
+    /// Returns an error if the I²C transaction fails
+    pub async fn read_charger_flag_2(&mut self) -> Result<ChargerFlag2, BQ25887Error<I2C::Error>> {
+        let reg = self.device.charger_flag_2().read_async().await?;
+
+        let pg = u8::from(reg.pg_flag()) << 7;
+        let vbus = u8::from(reg.vbus_flag()) << 4;
+        let ts = u8::from(reg.ts_flag()) << 2;
+        let ico = u8::from(reg.ico_flag()) << 1;
+
+        let byte = pg | vbus | ts | ico;
+        Ok(ChargerFlag2::from_bytes([byte]))
+    }
+
+    /// ### Breif
+    /// Reads FAULT Flag Register,
+    /// (Address = 0x11) (reset = 0x00)
+    /// BQ255887 p.50
+    /// ### Errors
+    /// Returns an error if the I²C transaction fails
+    pub async fn read_fault_flag(&mut self) -> Result<FaultFlag, BQ25887Error<I2C::Error>> {
+        let reg = self.device.fault_flag().read_async().await?;
+
+        let vbus_ovp = u8::from(reg.vbus_ovp_flag()) << 7;
+        let tshut = u8::from(reg.tshut_flag()) << 6;
+        let tmr = u8::from(reg.tmr_flag()) << 4;
+
+        let byte = vbus_ovp | tshut | tmr;
+        Ok(FaultFlag::from_bytes([byte]))
+    }
+
+    /// ### Breif
+    /// Reads Charger Mask 1 Register,
+    /// (Address = 0x12) (reset = 0x00)
+    /// BQ255887 p.51
+    /// ### Errors
+    /// Returns an error if the I²C transaction fails
+    pub async fn read_charger_mask_1(&mut self) -> Result<ChargerMask1, BQ25887Error<I2C::Error>> {
+        let reg = self.device.charger_mask_1().read_async().await?;
+
+        let adc_done = u8::from(reg.adc_done_mask());
+        let iindpm = u8::from(reg.iindpm_mask());
+        let vindpm = u8::from(reg.vindpm_mask());
+        let treg = u8::from(reg.treg_mask());
+        let wd = u8::from(reg.wd_mask());
+        let chrg = u8::from(reg.chrg_mask());
+
+        Ok(ChargerMask1::new()
+            .with_adc_done_mask(adc_done)
+            .with_iindpm_mask(iindpm)
+            .with_vinpdm_mask(vindpm)
+            .with_treg_mask(treg)
+            .with_wd_mask(wd)
+            .with_chrg_mask(chrg))
+    }
+
+    /// ### Breif
+    /// Writes Charger Mask 1 Register,
+    /// (Address = 0x12) (reset = 0x00)
+    /// BQ255887 p.51
+    /// ### Errors
+    /// Returns an error if the I²C transaction fails
+    pub async fn write_charger_mask_1(&mut self, mask: ChargerMask1) -> Result<(), BQ25887Error<I2C::Error>> {
+        let mut buf = [0u8; LARGEST_REG_SIZE_BYTES];
+        buf[0] = mask.bytes[0];
+        self.device
+            .interface()
+            .write_register(CHARGER_MASK_1_ADDR, LARGEST_REG_SIZE_BITS, &buf)
+            .await?;
+        Ok(())
+    }
+
+    /// ### Breif
+    /// Reads Charger Mask 2 Register,
+    /// (Address = 0x13) (reset = 0x00)
+    /// BQ255887 p.52
+    /// ### Errors
+    /// Returns an error if the I²C transaction fails
+    pub async fn read_charger_mask_2(&mut self) -> Result<ChargerMask2, BQ25887Error<I2C::Error>> {
+        let reg = self.device.charger_mask_2().read_async().await?;
+
+        let pg = u8::from(reg.pg_mask()) << 7;
+        let vbus = u8::from(reg.vbus_mask()) << 4;
+        let ts = u8::from(reg.ts_mask()) << 2;
+        let ico = u8::from(reg.ico_mask()) << 1;
+
+        let byte = pg | vbus | ts | ico;
+        Ok(ChargerMask2::from_bytes([byte]))
+    }
+
+    /// ### Breif
+    /// Writes Charger Mask 2 Register,
+    /// (Address = 0x13) (reset = 0x00)
+    /// BQ255887 p.52
+    /// ### Errors
+    /// Returns an error if the I²C transaction fails
+    pub async fn write_charger_mask_2(&mut self, mask: ChargerMask2) -> Result<(), BQ25887Error<I2C::Error>> {
+        let mut buf = [0u8; LARGEST_REG_SIZE_BYTES];
+        buf[0] = mask.bytes[0];
+        self.device
+            .interface()
+            .write_register(CHARGER_MASK_2_ADDR, LARGEST_REG_SIZE_BITS, &buf)
             .await?;
         Ok(())
     }
