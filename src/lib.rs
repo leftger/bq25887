@@ -188,7 +188,6 @@ pub struct ChargerControl4 {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 #[cfg_attr(feature = "defmt-03", derive(defmt::Format))]
 pub struct IcoCurrentLimitInUse {
-    #[skip(setters)]
     pub ico_ilim: B5,
     #[skip(setters, getters)]
     reserved: B3,
@@ -198,15 +197,10 @@ pub struct IcoCurrentLimitInUse {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 #[cfg_attr(feature = "defmt-03", derive(defmt::Format))]
 pub struct ChargerStatus1 {
-    #[skip(setters)]
     pub chrg_stat: B3,
-    #[skip(setters)]
     pub wd_stat: B1,
-    #[skip(setters)]
     pub treg_stat: B1,
-    #[skip(setters)]
     pub vindpm_stat: B1,
-    #[skip(setters)]
     pub iindpm_stat: B1,
     #[skip(setters, getters)]
     reserved: B1,
@@ -218,13 +212,10 @@ pub struct ChargerStatus1 {
 pub struct ChargerStatus2 {
     #[skip(setters, getters)]
     reserved_1: B1,
-    #[skip(setters)]
     pub ico_stat: B2,
     #[skip(setters, getters)]
     reserved_2: B1,
-    #[skip(setters)]
     pub vbus_stat: B3,
-    #[skip(setters)]
     pub pg_stat: B1,
 }
 
@@ -232,7 +223,6 @@ pub struct ChargerStatus2 {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 #[cfg_attr(feature = "defmt-03", derive(defmt::Format))]
 pub struct NTCStatus {
-    #[skip(setters)]
     pub ts_stat: B3,
     #[skip(setters, getters)]
     reserved: B5,
@@ -246,13 +236,10 @@ pub struct FaultStatus {
     reserved_1: B1,
     #[skip(setters, getters)]
     reserved_2: B3,
-    #[skip(setters)]
     pub tmr_stat: B1,
     #[skip(setters, getters)]
     reserved_3: B1,
-    #[skip(setters)]
     pub tshut_stat: B1,
-    #[skip(setters)]
     pub vbus_ovp_stat: B1,
 }
 
@@ -260,17 +247,12 @@ pub struct FaultStatus {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 #[cfg_attr(feature = "defmt-03", derive(defmt::Format))]
 pub struct ChargerFlag1 {
-    #[skip(setters)]
     pub chrg_flag: B1,
     #[skip(setters, getters)]
     reserved_1: B2,
-    #[skip(setters)]
     pub wd_flag: B1,
-    #[skip(setters)]
     pub treg_flag: B1,
-    #[skip(setters)]
     pub vindpm_flag: B1,
-    #[skip(setters)]
     pub iindpm_flag: B1,
     #[skip(setters, getters)]
     reserved_2: B1,
@@ -282,17 +264,13 @@ pub struct ChargerFlag1 {
 pub struct ChargerFlag2 {
     #[skip(setters, getters)]
     reserved_1: B1,
-    #[skip(setters)]
     pub ico_flag: B1,
-    #[skip(setters)]
     pub ts_flag: B1,
     #[skip(setters, getters)]
     reserved_2: B1,
-    #[skip(setters)]
     pub vbus_flag: B1,
     #[skip(setters, getters)]
     reserved_3: B2,
-    #[skip(setters)]
     pub pg_flag: B1,
 }
 
@@ -302,13 +280,10 @@ pub struct ChargerFlag2 {
 pub struct FaultFlag {
     #[skip(setters, getters)]
     reserved_1: B4,
-    #[skip(setters)]
     pub tmr_flag: B1,
     #[skip(setters, getters)]
     reserved_2: B1,
-    #[skip(setters)]
     pub tshut_flag: B1,
-    #[skip(setters)]
     pub vbus_ovp_flag: B1,
 }
 
@@ -332,17 +307,13 @@ pub struct ChargerMask1 {
 pub struct ChargerMask2 {
     #[skip(setters, getters)]
     reserved_1: B1,
-    #[skip(setters)]
     pub ico_mask: B1,
-    #[skip(setters)]
     pub ts_mask: B1,
     #[skip(setters, getters)]
     reserved_2: B1,
-    #[skip(setters)]
     pub vbus_mask: B1,
     #[skip(setters, getters)]
     reserved_3: B2,
-    #[skip(setters)]
     pub pg_mask: B1,
 }
 
@@ -392,13 +363,15 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     /// Returns an error if the I²C transaction fails or the register value cannot be parsed
     pub async fn read_charge_current_limit(&mut self) -> Result<ChargeCurrentLimit, BQ25887Error<I2C::Error>> {
         let reg = self.device.charge_current_limit().read_async().await?;
-        let en_hiz = u8::from(reg.en_hiz()) << 7;
-        let en_ilim = u8::from(reg.en_ilim()) << 6;
+
+        let en_hiz = u8::from(reg.en_hiz());
+        let en_ilim = u8::from(reg.en_ilim());
         let ichg: u8 = reg.ichg()?.into();
 
-        let byte = (en_hiz) | (en_ilim) | (ichg & 0b0011_1111);
-
-        Ok(ChargeCurrentLimit::from_bytes([byte]))
+        Ok(ChargeCurrentLimit::new()
+            .with_en_hiz(en_hiz)
+            .with_en_ilim(en_ilim)
+            .with_ichg(ichg))
     }
 
     /// ### Breif
@@ -428,14 +401,17 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     /// Returns an error if the I²C transaction fails or the register value cannot be parsed
     pub async fn read_input_voltage_limit(&mut self) -> Result<InputVoltageLimit, BQ25887Error<I2C::Error>> {
         let reg = self.device.input_voltage_limit().read_async().await?;
-        let en_vindpm_rst = u8::from(reg.en_vindpm_rst()) << 7;
-        let en_bat_dischg = u8::from(reg.en_bat_dischg()) << 6;
-        let pfm_ooa_dis = u8::from(reg.pfm_ooa_dis()) << 5;
+
+        let en_vindpm_rst = u8::from(reg.en_vindpm_rst());
+        let en_bat_dischg = u8::from(reg.en_bat_dischg());
+        let pfm_ooa_dis = u8::from(reg.pfm_ooa_dis());
         let vindpm: u8 = reg.vindpm()?.into();
 
-        let byte = en_vindpm_rst | en_bat_dischg | pfm_ooa_dis | (vindpm & 0b0001_1111);
-
-        Ok(InputVoltageLimit::from_bytes([byte]))
+        Ok(InputVoltageLimit::new()
+            .with_en_vindpm_rst(en_vindpm_rst)
+            .with_en_bat_dischg(en_bat_dischg)
+            .with_pfm_ooa_dis(pfm_ooa_dis)
+            .with_vindpm(vindpm))
     }
 
     /// ### Breif
@@ -465,13 +441,17 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     /// Returns an error if the I²C transaction fails or the register value cannot be parsed
     pub async fn read_input_current_limit(&mut self) -> Result<InputCurrentLimit, BQ25887Error<I2C::Error>> {
         let reg = self.device.input_current_limit().read_async().await?;
-        let force_ico = u8::from(reg.force_ico()) << 7;
-        let force_indet = u8::from(reg.force_indet()) << 6;
-        let en_ico = u8::from(reg.en_ico()) << 5;
+
+        let force_ico = u8::from(reg.force_ico());
+        let force_indet = u8::from(reg.force_indet());
+        let en_ico = u8::from(reg.en_ico());
         let iindpm: u8 = reg.iindpm()?.into();
 
-        let byte = force_ico | force_indet | en_ico | (iindpm & 0b0001_1111);
-        Ok(InputCurrentLimit::from_bytes([byte]))
+        Ok(InputCurrentLimit::new()
+            .with_force_ico(force_ico)
+            .with_force_indet(force_indet)
+            .with_en_ico(en_ico)
+            .with_iindpm(iindpm))
     }
 
     /// ### Breif
@@ -506,8 +486,10 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
 
         let iprechg: u8 = reg.iprechg()?.into();
         let iterm: u8 = reg.iprechg()?.into();
-        let byte = ((iprechg << 4) & 0b1111_0000) | (iterm & 0b0000_1111);
-        Ok(PrechargeAndTerminationCurrentLimit::from_bytes([byte]))
+
+        Ok(PrechargeAndTerminationCurrentLimit::new()
+            .with_iprechg(iprechg)
+            .with_iterm(iterm))
     }
 
     /// ### Breif
@@ -538,20 +520,20 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     pub async fn read_charger_control_1(&mut self) -> Result<ChargerControl1, BQ25887Error<I2C::Error>> {
         let reg = self.device.charger_ctrl_1().read_async().await?;
 
-        let en_term = u8::from(reg.en_term()) << 7;
-        let stat_dis = u8::from(reg.stat_dis()) << 6;
+        let en_term = u8::from(reg.en_term());
+        let stat_dis = u8::from(reg.stat_dis());
         let watchdog: u8 = reg.watchdog().into();
-        let en_timer = u8::from(reg.en_timer()) << 3;
+        let en_timer = u8::from(reg.en_timer());
         let chg_timer: u8 = reg.chg_timer().into();
         let tmr2x_en = u8::from(reg.tmr_2_x_en());
 
-        let byte = en_term
-            | stat_dis
-            | ((watchdog << 4) & 0b0011_0000)
-            | en_timer
-            | ((chg_timer << 1) & 0b0000_0110)
-            | tmr2x_en;
-        Ok(ChargerControl1::from_bytes([byte]))
+        Ok(ChargerControl1::new()
+            .with_en_term(en_term)
+            .with_stat_dis(stat_dis)
+            .with_watchdog(watchdog)
+            .with_en_timer(en_timer)
+            .with_chg_timer(chg_timer)
+            .with_tmr2x_en(tmr2x_en))
     }
 
     /// ### Breif
@@ -579,14 +561,18 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     pub async fn read_charger_control_2(&mut self) -> Result<ChargerControl2, BQ25887Error<I2C::Error>> {
         let reg = self.device.charger_ctrl_2().read_async().await?;
 
-        let auto_indet_en = u8::from(reg.auto_indet_en()) << 6;
+        let auto_indet_en = u8::from(reg.auto_indet_en());
         let treg: u8 = reg.treg().into();
-        let en_chg = u8::from(reg.en_chg()) << 3;
-        let celllowv = u8::from(reg.celllowv()) << 2;
+        let en_chg = u8::from(reg.en_chg());
+        let celllowv = u8::from(reg.celllowv());
         let vrechg: u8 = reg.vcell_rechg().into();
 
-        let byte = auto_indet_en | ((treg << 4) & 0b0011_0000) | en_chg | celllowv | (vrechg & 0b0000_0011);
-        Ok(ChargerControl2::from_bytes([byte]))
+        Ok(ChargerControl2::new()
+            .with_auto_indet_en(auto_indet_en)
+            .with_treg(treg)
+            .with_en_chg(en_chg)
+            .with_celllowv(celllowv)
+            .with_vrechg(vrechg))
     }
 
     /// ### Breif
@@ -614,12 +600,14 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     pub async fn read_charger_control_3(&mut self) -> Result<ChargerControl3, BQ25887Error<I2C::Error>> {
         let reg = self.device.charger_ctrl_3().read_async().await?;
 
-        let pfm_dis = u8::from(reg.pfm_dis()) << 7;
-        let wd_rst = u8::from(reg.wd_rst()) << 6;
+        let pfm_dis = u8::from(reg.pfm_dis());
+        let wd_rst = u8::from(reg.wd_rst());
         let topoff_timer: u8 = reg.topoff_timer().into();
 
-        let byte = pfm_dis | wd_rst | ((topoff_timer << 4) & 0b0011_0000);
-        Ok(ChargerControl3::from_bytes([byte]))
+        Ok(ChargerControl3::new()
+            .with_pfm_dis(pfm_dis)
+            .with_wd_rst(wd_rst)
+            .with_topoff_timer(topoff_timer))
     }
 
     /// ### Breif
@@ -648,11 +636,13 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
         let reg = self.device.charger_ctrl_4().read_async().await?;
 
         let vset: u8 = reg.jeita_vset().into();
-        let iseth = u8::from(reg.jeita_isetc()) << 2;
+        let iseth = u8::from(reg.jeita_iseth());
         let isetcurr: u8 = reg.jeita_isetc().into();
 
-        let byte = ((vset << 3) & 0b0001_1000) | iseth | (isetcurr & 0b0000_0011);
-        Ok(ChargerControl4::from_bytes([byte]))
+        Ok(ChargerControl4::new()
+            .with_jeita_vset(vset)
+            .with_jeita_iseth(iseth)
+            .with_jeita_isetc(isetcurr))
     }
 
     /// ### Breif
@@ -680,7 +670,7 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     pub async fn read_ico_current_limit_in_use(&mut self) -> Result<IcoCurrentLimitInUse, BQ25887Error<I2C::Error>> {
         let reg = self.device.ico_current_limit().read_async().await?;
 
-        Ok(IcoCurrentLimitInUse::from_bytes([reg.ico_ilim()]))
+        Ok(IcoCurrentLimitInUse::new().with_ico_ilim(reg.ico_ilim()))
     }
 
     /// ### Breif
@@ -692,15 +682,18 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     pub async fn read_charger_status_1(&mut self) -> Result<ChargerStatus1, BQ25887Error<I2C::Error>> {
         let reg = self.device.charger_status_1().read_async().await?;
 
-        let iindpm_stat = u8::from(reg.iindpm_stat()) << 6;
-        let vindpm_stat = u8::from(reg.vindpm_stat()) << 5;
-        let treg_stat = u8::from(reg.treg_stat()) << 4;
-        let wd_stat = u8::from(reg.wd_stat()) << 3;
+        let iindpm_stat = u8::from(reg.iindpm_stat());
+        let vindpm_stat = u8::from(reg.vindpm_stat());
+        let treg_stat = u8::from(reg.treg_stat());
+        let wd_stat = u8::from(reg.wd_stat());
         let chrg_stat: u8 = reg.chrg_stat().into();
 
-        let byte = iindpm_stat | vindpm_stat | treg_stat | wd_stat | (chrg_stat & 0b0000_0111);
-
-        Ok(ChargerStatus1::from_bytes([byte]))
+        Ok(ChargerStatus1::new()
+            .with_iindpm_stat(iindpm_stat)
+            .with_vindpm_stat(vindpm_stat)
+            .with_treg_stat(treg_stat)
+            .with_wd_stat(wd_stat)
+            .with_chrg_stat(chrg_stat))
     }
 
     /// ### Breif
@@ -712,13 +705,14 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     pub async fn read_charger_status_2(&mut self) -> Result<ChargerStatus2, BQ25887Error<I2C::Error>> {
         let reg = self.device.charger_status_2().read_async().await?;
 
-        let pg_stat = u8::from(reg.pg_stat()) << 7;
+        let pg_stat = u8::from(reg.pg_stat());
         let vbus_stat: u8 = reg.vbus_stat().into();
         let ico_stat: u8 = reg.ico_stat().into();
 
-        let byte = pg_stat | ((vbus_stat << 4) & 0b0111_0000) | ((ico_stat << 1) & 0b0000_0110);
-
-        Ok(ChargerStatus2::from_bytes([byte]))
+        Ok(ChargerStatus2::new()
+            .with_pg_stat(pg_stat)
+            .with_vbus_stat(vbus_stat)
+            .with_ico_stat(ico_stat))
     }
 
     /// ### Breif
@@ -731,7 +725,8 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
         let reg = self.device.ntc_status().read_async().await?;
 
         let ts_stat: u8 = reg.ts_stat()?.into();
-        Ok(NTCStatus::from_bytes([ts_stat]))
+
+        Ok(NTCStatus::new().with_ts_stat(ts_stat))
     }
 
     /// ### Breif
@@ -743,12 +738,14 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     pub async fn read_fault_status(&mut self) -> Result<FaultStatus, BQ25887Error<I2C::Error>> {
         let reg = self.device.fault_status().read_async().await?;
 
-        let vbus_ovp_stat = u8::from(reg.vbus_ovp_stat()) << 7;
-        let tshut_stat = u8::from(reg.tshut_stat()) << 6;
-        let tmr_stat = u8::from(reg.tmr_stat()) << 4;
+        let vbus_ovp_stat = u8::from(reg.vbus_ovp_stat());
+        let tshut_stat = u8::from(reg.tshut_stat());
+        let tmr_stat = u8::from(reg.tmr_stat());
 
-        let byte = vbus_ovp_stat | tshut_stat | tmr_stat;
-        Ok(FaultStatus::from_bytes([byte]))
+        Ok(FaultStatus::new()
+            .with_vbus_ovp_stat(vbus_ovp_stat)
+            .with_tshut_stat(tshut_stat)
+            .with_tmr_stat(tmr_stat))
     }
 
     /// ### Breif
@@ -760,14 +757,18 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     pub async fn read_charger_flag_1(&mut self) -> Result<ChargerFlag1, BQ25887Error<I2C::Error>> {
         let reg = self.device.charger_flag_1().read_async().await?;
 
-        let iindpm = u8::from(reg.iindpm_flag()) << 6;
-        let vindpm = u8::from(reg.vindpm_flag()) << 5;
-        let treg = u8::from(reg.treg_flag()) << 4;
-        let wd = u8::from(reg.wd_flag()) << 3;
+        let iindpm = u8::from(reg.iindpm_flag());
+        let vindpm = u8::from(reg.vindpm_flag());
+        let treg = u8::from(reg.treg_flag());
+        let wd = u8::from(reg.wd_flag());
         let chrg = u8::from(reg.chrg_flag());
 
-        let byte = iindpm | vindpm | treg | wd | chrg;
-        Ok(ChargerFlag1::from_bytes([byte]))
+        Ok(ChargerFlag1::new()
+            .with_iindpm_flag(iindpm)
+            .with_vindpm_flag(vindpm)
+            .with_treg_flag(treg)
+            .with_wd_flag(wd)
+            .with_chrg_flag(chrg))
     }
 
     /// ### Breif
@@ -779,13 +780,16 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     pub async fn read_charger_flag_2(&mut self) -> Result<ChargerFlag2, BQ25887Error<I2C::Error>> {
         let reg = self.device.charger_flag_2().read_async().await?;
 
-        let pg = u8::from(reg.pg_flag()) << 7;
-        let vbus = u8::from(reg.vbus_flag()) << 4;
-        let ts = u8::from(reg.ts_flag()) << 2;
-        let ico = u8::from(reg.ico_flag()) << 1;
+        let pg = u8::from(reg.pg_flag());
+        let vbus = u8::from(reg.vbus_flag());
+        let ts = u8::from(reg.ts_flag());
+        let ico = u8::from(reg.ico_flag());
 
-        let byte = pg | vbus | ts | ico;
-        Ok(ChargerFlag2::from_bytes([byte]))
+        Ok(ChargerFlag2::new()
+            .with_pg_flag(pg)
+            .with_vbus_flag(vbus)
+            .with_ts_flag(ts)
+            .with_ico_flag(ico))
     }
 
     /// ### Breif
@@ -797,12 +801,14 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     pub async fn read_fault_flag(&mut self) -> Result<FaultFlag, BQ25887Error<I2C::Error>> {
         let reg = self.device.fault_flag().read_async().await?;
 
-        let vbus_ovp = u8::from(reg.vbus_ovp_flag()) << 7;
-        let tshut = u8::from(reg.tshut_flag()) << 6;
-        let tmr = u8::from(reg.tmr_flag()) << 4;
+        let vbus_ovp = u8::from(reg.vbus_ovp_flag());
+        let tshut = u8::from(reg.tshut_flag());
+        let tmr = u8::from(reg.tmr_flag());
 
-        let byte = vbus_ovp | tshut | tmr;
-        Ok(FaultFlag::from_bytes([byte]))
+        Ok(FaultFlag::new()
+            .with_vbus_ovp_flag(vbus_ovp)
+            .with_tshut_flag(tshut)
+            .with_tmr_flag(tmr))
     }
 
     /// ### Breif
@@ -855,13 +861,16 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     pub async fn read_charger_mask_2(&mut self) -> Result<ChargerMask2, BQ25887Error<I2C::Error>> {
         let reg = self.device.charger_mask_2().read_async().await?;
 
-        let pg = u8::from(reg.pg_mask()) << 7;
-        let vbus = u8::from(reg.vbus_mask()) << 4;
-        let ts = u8::from(reg.ts_mask()) << 2;
-        let ico = u8::from(reg.ico_mask()) << 1;
+        let pg = u8::from(reg.pg_mask());
+        let vbus = u8::from(reg.vbus_mask());
+        let ts = u8::from(reg.ts_mask());
+        let ico = u8::from(reg.ico_mask());
 
-        let byte = pg | vbus | ts | ico;
-        Ok(ChargerMask2::from_bytes([byte]))
+        Ok(ChargerMask2::new()
+            .with_pg_mask(pg)
+            .with_vbus_mask(vbus)
+            .with_ts_mask(ts)
+            .with_ico_mask(ico))
     }
 
     /// ### Breif
