@@ -31,6 +31,7 @@ const CHARGER_CONTROL_3_ADDR: u8 = 0x07;
 const CHARGER_CONTROL_4_ADDR: u8 = 0x08;
 const CHARGER_MASK_1_ADDR: u8 = 0x12;
 const CHARGER_MASK_2_ADDR: u8 = 0x13;
+const FAULT_MASK_ADDR: u8 = 0x14;
 
 const BQ_ADDR: u8 = 0x6A;
 
@@ -317,6 +318,31 @@ pub struct ChargerMask2 {
     pub pg_mask: B1,
 }
 
+#[bitfield]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "defmt-03", derive(defmt::Format))]
+pub struct FaultMask{
+    #[skip(setters, getters)]
+    reserved_1: B3,
+    pub sns_short_mask: B1,
+    pub tmr_mask: B1,
+    #[skip(setters, getters)]
+    reserved_2: B1,
+    pub tshut_mask: B1,
+    pub vbus_ovp_mask: B1,
+}
+
+#[bitfield]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "defmt-03", derive(defmt::Format))]
+pub struct AdcControl{
+    #[skip(setters, getters)]
+    reserved: B4,
+    pub adc_sample: B2,
+    pub adc_rate: B1,
+    pub adc_en: B1,
+}
+
 // ------------------------------------------------------------------------------------
 
 impl<I2C: I2cTrait> Bq25887Driver<I2C> {
@@ -366,7 +392,7 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
 
         let en_hiz = u8::from(reg.en_hiz());
         let en_ilim = u8::from(reg.en_ilim());
-        let ichg: u8 = reg.ichg()?.into();
+        let ichg = u8::from(reg.ichg()?);
 
         Ok(ChargeCurrentLimit::new()
             .with_en_hiz(en_hiz)
@@ -405,7 +431,7 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
         let en_vindpm_rst = u8::from(reg.en_vindpm_rst());
         let en_bat_dischg = u8::from(reg.en_bat_dischg());
         let pfm_ooa_dis = u8::from(reg.pfm_ooa_dis());
-        let vindpm: u8 = reg.vindpm()?.into();
+        let vindpm = u8::from(reg.vindpm()?);
 
         Ok(InputVoltageLimit::new()
             .with_en_vindpm_rst(en_vindpm_rst)
@@ -445,7 +471,7 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
         let force_ico = u8::from(reg.force_ico());
         let force_indet = u8::from(reg.force_indet());
         let en_ico = u8::from(reg.en_ico());
-        let iindpm: u8 = reg.iindpm()?.into();
+        let iindpm = u8::from(reg.iindpm()?);
 
         Ok(InputCurrentLimit::new()
             .with_force_ico(force_ico)
@@ -465,7 +491,7 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
         current_limit: InputCurrentLimit,
     ) -> Result<(), BQ25887Error<I2C::Error>> {
         let mut buf = [0u8; LARGEST_REG_SIZE_BYTES];
-        buf[0] = current_limit.into_bytes()[0];
+        buf[0] = current_limit.bytes[0];
         self.device
             .interface()
             .write_register(INPUT_CURRENT_LIMIT_ADDR, LARGEST_REG_SIZE_BITS, &buf)
@@ -484,8 +510,8 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     ) -> Result<PrechargeAndTerminationCurrentLimit, BQ25887Error<I2C::Error>> {
         let reg = self.device.prechg_termination_ctrl().read_async().await?;
 
-        let iprechg: u8 = reg.iprechg()?.into();
-        let iterm: u8 = reg.iprechg()?.into();
+        let iprechg = u8::from(reg.iprechg()?);
+        let iterm = u8::from(reg.iprechg()?);
 
         Ok(PrechargeAndTerminationCurrentLimit::new()
             .with_iprechg(iprechg)
@@ -522,9 +548,9 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
 
         let en_term = u8::from(reg.en_term());
         let stat_dis = u8::from(reg.stat_dis());
-        let watchdog: u8 = reg.watchdog().into();
+        let watchdog = u8::from(reg.watchdog());
         let en_timer = u8::from(reg.en_timer());
-        let chg_timer: u8 = reg.chg_timer().into();
+        let chg_timer= u8::from(reg.chg_timer());
         let tmr2x_en = u8::from(reg.tmr_2_x_en());
 
         Ok(ChargerControl1::new()
@@ -562,10 +588,10 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
         let reg = self.device.charger_ctrl_2().read_async().await?;
 
         let auto_indet_en = u8::from(reg.auto_indet_en());
-        let treg: u8 = reg.treg().into();
+        let treg = u8::from(reg.treg());
         let en_chg = u8::from(reg.en_chg());
         let celllowv = u8::from(reg.celllowv());
-        let vrechg: u8 = reg.vcell_rechg().into();
+        let vrechg = u8::from(reg.vcell_rechg());
 
         Ok(ChargerControl2::new()
             .with_auto_indet_en(auto_indet_en)
@@ -602,7 +628,7 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
 
         let pfm_dis = u8::from(reg.pfm_dis());
         let wd_rst = u8::from(reg.wd_rst());
-        let topoff_timer: u8 = reg.topoff_timer().into();
+        let topoff_timer = u8::from(reg.topoff_timer());
 
         Ok(ChargerControl3::new()
             .with_pfm_dis(pfm_dis)
@@ -635,9 +661,9 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     pub async fn read_charger_control_4(&mut self) -> Result<ChargerControl4, BQ25887Error<I2C::Error>> {
         let reg = self.device.charger_ctrl_4().read_async().await?;
 
-        let vset: u8 = reg.jeita_vset().into();
+        let vset = u8::from(reg.jeita_vset());
         let iseth = u8::from(reg.jeita_iseth());
-        let isetcurr: u8 = reg.jeita_isetc().into();
+        let isetcurr = u8::from(reg.jeita_isetc());
 
         Ok(ChargerControl4::new()
             .with_jeita_vset(vset)
@@ -686,7 +712,7 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
         let vindpm_stat = u8::from(reg.vindpm_stat());
         let treg_stat = u8::from(reg.treg_stat());
         let wd_stat = u8::from(reg.wd_stat());
-        let chrg_stat: u8 = reg.chrg_stat().into();
+        let chrg_stat = u8::from(reg.chrg_stat());
 
         Ok(ChargerStatus1::new()
             .with_iindpm_stat(iindpm_stat)
@@ -706,8 +732,8 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
         let reg = self.device.charger_status_2().read_async().await?;
 
         let pg_stat = u8::from(reg.pg_stat());
-        let vbus_stat: u8 = reg.vbus_stat().into();
-        let ico_stat: u8 = reg.ico_stat().into();
+        let vbus_stat = u8::from(reg.vbus_stat());
+        let ico_stat = u8::from(reg.ico_stat());
 
         Ok(ChargerStatus2::new()
             .with_pg_stat(pg_stat)
@@ -724,7 +750,7 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     pub async fn read_ntc_status(&mut self) -> Result<NTCStatus, BQ25887Error<I2C::Error>> {
         let reg = self.device.ntc_status().read_async().await?;
 
-        let ts_stat: u8 = reg.ts_stat()?.into();
+        let ts_stat = u8::from(reg.ts_stat()?);
 
         Ok(NTCStatus::new().with_ts_stat(ts_stat))
     }
@@ -888,4 +914,54 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
             .await?;
         Ok(())
     }
+
+    /// ### Breif
+    /// Reads FAULT Mask Register,
+    /// (Address = 0x14) (reset = 0x00)
+    /// BQ255887 p.53
+    /// ### Errors
+    /// Returns an error if the I²C transaction fails
+    pub async fn read_fault_mask(&mut self) -> Result<FaultMask, BQ25887Error<I2C::Error>>{
+        let reg = self.device.fault_mask().read_async().await?;
+
+        let vbus = u8::from(reg.vbus_ovp_mask());
+        let tshut = u8::from(reg.tshut_mask());
+        let tmr = u8::from(reg.tmr_mask());
+        let sns_short = u8::from(reg.sns_short_mask());
+
+        Ok(FaultMask::new().with_vbus_ovp_mask(vbus).with_tshut_mask(tshut).with_tmr_mask(tmr).with_sns_short_mask(sns_short))
+    }
+
+    /// ### Breif
+    /// Writes FAULT Mask Register,
+    /// (Address = 0x14) (reset = 0x00)
+    /// BQ255887 p.53
+    /// ### Errors
+    /// Returns an error if the I²C transaction fails
+    pub async fn write_fault_mask(&mut self, mask: FaultMask) -> Result<(), BQ25887Error<I2C::Error>> {
+        let mut buf = [0u8; LARGEST_REG_SIZE_BYTES];
+        buf[0] = mask.bytes[0];
+        self.device
+            .interface()
+            .write_register(FAULT_MASK_ADDR, LARGEST_REG_SIZE_BITS, &buf)
+            .await?;
+        Ok(())
+    }
+
+    /// ### Breif
+    /// Reads ADC Control Register,
+    /// (Address = 0x15) (reset = 0x00)
+    /// BQ255887 p.54
+    /// ### Errors
+    /// Returns an error if the I²C transaction fails
+    pub async fn read_adc_control(&mut self) -> Result<AdcControl, BQ25887Error<I2C::Error>>{
+        let reg = self.device.adc_control().read_async().await?;
+
+        let adc_en = u8::from(reg.adc_en());
+        let adc_rate = u8::from(reg.adc_rate());
+        let adc_sample = u8::from(reg.adc_sample());
+
+        Ok(AdcControl::new().with_adc_en(adc_en).with_adc_rate(adc_rate).with_adc_sample(adc_sample))
+    }
+
 }

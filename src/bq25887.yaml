@@ -881,6 +881,9 @@ FAULT_MASK:
     TMR_MASK:
       base: bool
       start: 4
+    SNS_SHORT_MASK:
+      base: bool
+      start: 3
 ADC_CONTROL:
   type: register
   description: ADC Control Register
