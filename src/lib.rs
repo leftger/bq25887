@@ -32,6 +32,14 @@ const CHARGER_CONTROL_4_ADDR: u8 = 0x08;
 const CHARGER_MASK_1_ADDR: u8 = 0x12;
 const CHARGER_MASK_2_ADDR: u8 = 0x13;
 const FAULT_MASK_ADDR: u8 = 0x14;
+const ADC_CONTROL_ADDR: u8 = 0x15;
+const ADC_FUNCTION_DISABLE_ADDR: u8 = 0x16;
+const PART_INFORMATION_ADDR: u8 = 0x25;
+const CELL_BALANCING_CONTROL_1_ADDR: u8 = 0x28;
+const CELL_BALANCING_CONTROL_2_ADDR: u8 = 0x29;
+const CELL_BALANCING_STATUS_AND_CONTROL_ADDR: u8 = 0x2A;
+const CELL_BALANCING_FLAG_ADDR: u8 = 0x2B;
+const CELL_BALANCING_MASK_ADDR: u8 = 0x2C;
 
 const BQ_ADDR: u8 = 0x6A;
 
@@ -321,7 +329,7 @@ pub struct ChargerMask2 {
 #[bitfield]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 #[cfg_attr(feature = "defmt-03", derive(defmt::Format))]
-pub struct FaultMask{
+pub struct FaultMask {
     #[skip(setters, getters)]
     reserved_1: B3,
     pub sns_short_mask: B1,
@@ -335,12 +343,208 @@ pub struct FaultMask{
 #[bitfield]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 #[cfg_attr(feature = "defmt-03", derive(defmt::Format))]
-pub struct AdcControl{
+pub struct AdcControl {
     #[skip(setters, getters)]
     reserved: B4,
     pub adc_sample: B2,
     pub adc_rate: B1,
     pub adc_en: B1,
+}
+
+#[bitfield]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "defmt-03", derive(defmt::Format))]
+pub struct AdcFunctionDisable {
+    pub tdie_adc_dis: B1,
+    pub vcell_adc_dis: B1,
+    pub ts_adc_dis: B1,
+    #[skip(setters, getters)]
+    reserved: B1,
+    pub vbat_adc_dis: B1,
+    pub vbus_adc_dis: B1,
+    pub ichg_adc_dis: B1,
+    pub ibus_adc_dis: B1,
+}
+
+#[bitfield]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "defmt-03", derive(defmt::Format))]
+pub struct IbusAdc1 {
+    pub ibus_adc_msb: B8,
+}
+
+#[bitfield]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "defmt-03", derive(defmt::Format))]
+pub struct IbusAdc0 {
+    pub ibus_adc_lsb: B8,
+}
+
+#[bitfield]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "defmt-03", derive(defmt::Format))]
+pub struct IChgAdc1 {
+    pub ichg_adc_msb: B8,
+}
+
+#[bitfield]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "defmt-03", derive(defmt::Format))]
+pub struct IChgAdc0 {
+    pub ichg_adc_lsb: B8,
+}
+
+#[bitfield]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "defmt-03", derive(defmt::Format))]
+pub struct VBusAdc1 {
+    pub vbus_adc_msb: B8,
+}
+
+#[bitfield]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "defmt-03", derive(defmt::Format))]
+pub struct VBusAdc0 {
+    pub vbus_adc_lsb: B8,
+}
+
+#[bitfield]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "defmt-03", derive(defmt::Format))]
+pub struct VBatAdc1 {
+    pub vbat_adc_msb: B8,
+}
+
+#[bitfield]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "defmt-03", derive(defmt::Format))]
+pub struct VBatAdc0 {
+    pub vbat_adc_lsb: B8,
+}
+
+#[bitfield]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "defmt-03", derive(defmt::Format))]
+pub struct VCellTopAdc1 {
+    pub vcelltop_adc_msb: B8,
+}
+
+#[bitfield]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "defmt-03", derive(defmt::Format))]
+pub struct VCellTopAdc0 {
+    pub vcelltop_adc_lsb: B8,
+}
+
+#[bitfield]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "defmt-03", derive(defmt::Format))]
+pub struct TsAdc1 {
+    pub ts_adc_msb: B8,
+}
+
+#[bitfield]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "defmt-03", derive(defmt::Format))]
+pub struct TsAdc0 {
+    pub ts_adc_lsb: B8,
+}
+
+#[bitfield]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "defmt-03", derive(defmt::Format))]
+pub struct TdieAdc1 {
+    pub tdie_adc_msb: B8,
+}
+
+#[bitfield]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "defmt-03", derive(defmt::Format))]
+pub struct TdieAdc0 {
+    pub tdie_adc_lsb: B8,
+}
+
+#[bitfield]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "defmt-03", derive(defmt::Format))]
+pub struct PartInformation {
+    pub dev_rev: B3,
+    pub pn: B4,
+    pub reg_rst: B1,
+}
+
+#[bitfield]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "defmt-03", derive(defmt::Format))]
+pub struct VCellBotAdc1 {
+    pub vcellbot_adc_msb: B8,
+}
+
+#[bitfield]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "defmt-03", derive(defmt::Format))]
+pub struct VCellBotAdc0 {
+    pub vcellbot_adc_lsb: B8,
+}
+
+#[bitfield]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "defmt-03", derive(defmt::Format))]
+pub struct CellBalancingControl1 {
+    pub tsettle: B2,
+    pub tcb_active: B2,
+    pub tcb_qual_interval: B1,
+    pub vdiff_end_offset: B3,
+}
+
+#[bitfield]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "defmt-03", derive(defmt::Format))]
+pub struct CellBalancingControl2 {
+    pub vdiff_start: B4,
+    pub vqual_th: B4,
+}
+
+#[bitfield]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "defmt-03", derive(defmt::Format))]
+pub struct CellBalancingStatusAndControl {
+    pub cb_oc_stat: B1,
+    pub ls_ov_stat: B1,
+    pub hs_ov_stat: B1,
+    pub ls_cv_stat: B1,
+    pub hs_cv_stat: B1,
+    pub cb_stat: B1,
+    pub cb_auto_en: B1,
+    pub cb_chg_dis: B1,
+}
+
+#[bitfield]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "defmt-03", derive(defmt::Format))]
+pub struct CellBalancingFlag {
+    pub cb_oc_flag: B1,
+    pub ls_ov_flag: B1,
+    pub hs_ov_flag: B1,
+    pub ls_cv_flag: B1,
+    pub hs_cv_flag: B1,
+    pub cb_flag: B1,
+    pub qcbl_en: B1,
+    pub qcbh_en: B1,
+}
+
+#[bitfield]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "defmt-03", derive(defmt::Format))]
+pub struct CellBalancingMask {
+    pub cb_oc_mask: B1,
+    pub ls_ov_mask: B1,
+    pub hs_ov_mask: B1,
+    pub ls_cv_mask: B1,
+    pub hs_cv_mask: B1,
+    pub cb_mask: B1,
+    #[skip(setters, getters)]
+    reserved: B2,
 }
 
 // ------------------------------------------------------------------------------------
@@ -550,7 +754,7 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
         let stat_dis = u8::from(reg.stat_dis());
         let watchdog = u8::from(reg.watchdog());
         let en_timer = u8::from(reg.en_timer());
-        let chg_timer= u8::from(reg.chg_timer());
+        let chg_timer = u8::from(reg.chg_timer());
         let tmr2x_en = u8::from(reg.tmr_2_x_en());
 
         Ok(ChargerControl1::new()
@@ -921,7 +1125,7 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     /// BQ255887 p.53
     /// ### Errors
     /// Returns an error if the I²C transaction fails
-    pub async fn read_fault_mask(&mut self) -> Result<FaultMask, BQ25887Error<I2C::Error>>{
+    pub async fn read_fault_mask(&mut self) -> Result<FaultMask, BQ25887Error<I2C::Error>> {
         let reg = self.device.fault_mask().read_async().await?;
 
         let vbus = u8::from(reg.vbus_ovp_mask());
@@ -929,7 +1133,11 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
         let tmr = u8::from(reg.tmr_mask());
         let sns_short = u8::from(reg.sns_short_mask());
 
-        Ok(FaultMask::new().with_vbus_ovp_mask(vbus).with_tshut_mask(tshut).with_tmr_mask(tmr).with_sns_short_mask(sns_short))
+        Ok(FaultMask::new()
+            .with_vbus_ovp_mask(vbus)
+            .with_tshut_mask(tshut)
+            .with_tmr_mask(tmr)
+            .with_sns_short_mask(sns_short))
     }
 
     /// ### Breif
@@ -954,14 +1162,552 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     /// BQ255887 p.54
     /// ### Errors
     /// Returns an error if the I²C transaction fails
-    pub async fn read_adc_control(&mut self) -> Result<AdcControl, BQ25887Error<I2C::Error>>{
+    pub async fn read_adc_control(&mut self) -> Result<AdcControl, BQ25887Error<I2C::Error>> {
         let reg = self.device.adc_control().read_async().await?;
 
         let adc_en = u8::from(reg.adc_en());
         let adc_rate = u8::from(reg.adc_rate());
         let adc_sample = u8::from(reg.adc_sample());
 
-        Ok(AdcControl::new().with_adc_en(adc_en).with_adc_rate(adc_rate).with_adc_sample(adc_sample))
+        Ok(AdcControl::new()
+            .with_adc_en(adc_en)
+            .with_adc_rate(adc_rate)
+            .with_adc_sample(adc_sample))
     }
 
+    /// ### Breif
+    /// Writes ADC Control Register,
+    /// (Address = 0x15) (reset = 0x00)
+    /// BQ255887 p.54
+    /// ### Errors
+    /// Returns an error if the I²C transaction fails
+    pub async fn write_adc_control(&mut self, control: AdcControl) -> Result<(), BQ25887Error<I2C::Error>> {
+        let mut buf = [0u8; LARGEST_REG_SIZE_BYTES];
+        buf[0] = control.bytes[0];
+        self.device
+            .interface()
+            .write_register(ADC_CONTROL_ADDR, LARGEST_REG_SIZE_BITS, &buf)
+            .await?;
+        Ok(())
+    }
+
+    /// ### Breif
+    /// Reads ADC Function Disable Register,
+    /// (Address = 0x16) (reset = 0x00)
+    /// BQ255887 p.55
+    /// ### Errors
+    /// Returns an error if the I²C transaction fails
+    pub async fn read_adc_function_disable(&mut self) -> Result<AdcFunctionDisable, BQ25887Error<I2C::Error>> {
+        let reg = self.device.adc_function_disable().read_async().await?;
+
+        let ibus_adc_dis = u8::from(reg.ibus_adc_dis());
+        let ichg_adc_dis = u8::from(reg.ichg_adc_dis());
+        let vbus_adc_dis = u8::from(reg.vbus_adc_dis());
+        let vbat_adc_dis = u8::from(reg.vbat_adc_dis());
+        let ts_adc_dis = u8::from(reg.ts_adc_dis());
+        let vcell_adc_dis = u8::from(reg.vcell_adc_dis());
+        let tdie_adc_dis = u8::from(reg.tdie_adc_dis());
+
+        Ok(AdcFunctionDisable::new()
+            .with_ibus_adc_dis(ibus_adc_dis)
+            .with_ichg_adc_dis(ichg_adc_dis)
+            .with_vbus_adc_dis(vbus_adc_dis)
+            .with_vbat_adc_dis(vbat_adc_dis)
+            .with_ts_adc_dis(ts_adc_dis)
+            .with_vcell_adc_dis(vcell_adc_dis)
+            .with_tdie_adc_dis(tdie_adc_dis))
+    }
+
+    /// ### Breif
+    /// Writes ADC Function Disable Register,
+    /// (Address = 0x16) (reset = 0x00)
+    /// BQ255887 p.55
+    /// ### Errors
+    /// Returns an error if the I²C transaction fails
+    pub async fn write_adc_function_disable(
+        &mut self,
+        function: AdcFunctionDisable,
+    ) -> Result<(), BQ25887Error<I2C::Error>> {
+        let mut buf = [0u8; LARGEST_REG_SIZE_BYTES];
+        buf[0] = function.bytes[0];
+        self.device
+            .interface()
+            .write_register(ADC_FUNCTION_DISABLE_ADDR, LARGEST_REG_SIZE_BITS, &buf)
+            .await?;
+        Ok(())
+    }
+
+    /// ### Breif
+    /// Reads IBUS ADC 1 Register,
+    /// (Address = 0x17) (reset = 0x00)
+    /// BQ255887 p.56
+    /// ### Errors
+    /// Returns an error if the I²C transaction fails
+    pub async fn read_ibus_adc_1(&mut self) -> Result<IbusAdc1, BQ25887Error<I2C::Error>> {
+        let reg = self.device.ibus_adc_1().read_async().await?;
+
+        let ibus_adc = reg.ibus_adc_msb();
+
+        Ok(IbusAdc1::new().with_ibus_adc_msb(ibus_adc))
+    }
+
+    /// ### Breif
+    /// Reads IBUS ADC 0 Register,
+    /// (Address = 0x18) (reset = 0x00)
+    /// BQ255887 p.56
+    /// ### Errors
+    /// Returns an error if the I²C transaction fails
+    pub async fn read_ibus_adc_0(&mut self) -> Result<IbusAdc0, BQ25887Error<I2C::Error>> {
+        let reg = self.device.ibus_adc_0().read_async().await?;
+
+        let ibus_adc = reg.ibus_adc_lsb();
+
+        Ok(IbusAdc0::new().with_ibus_adc_lsb(ibus_adc))
+    }
+
+    /// ### Breif
+    /// Reads ICHG ADC 1 Register,
+    /// (Address = 0x19) (reset = 0x00)
+    /// BQ255887 p.57
+    /// ### Errors
+    /// Returns an error if the I²C transaction fails
+    pub async fn read_ichg_adc_1(&mut self) -> Result<IChgAdc1, BQ25887Error<I2C::Error>> {
+        let reg = self.device.ichg_adc_1().read_async().await?;
+
+        let ichg_adc = reg.ichg_adc_msb();
+
+        Ok(IChgAdc1::new().with_ichg_adc_msb(ichg_adc))
+    }
+
+    /// ### Breif
+    /// Reads ICHG ADC 0 Register,
+    /// (Address = 0x1A) (reset = 0x00)
+    /// BQ255887 p.57
+    /// ### Errors
+    /// Returns an error if the I²C transaction fails
+    pub async fn read_ichg_adc_0(&mut self) -> Result<IChgAdc0, BQ25887Error<I2C::Error>> {
+        let reg = self.device.ichg_adc_0().read_async().await?;
+
+        let ichg_adc = reg.ichg_adc_lsb();
+
+        Ok(IChgAdc0::new().with_ichg_adc_lsb(ichg_adc))
+    }
+
+    /// ### Breif
+    /// Reads VBUS ADC 1 Register,
+    /// (Address = 0x1B) (reset = 0x00)
+    /// BQ255887 p.58
+    /// ### Errors
+    /// Returns an error if the I²C transaction fails
+    pub async fn read_vbus_adc_1(&mut self) -> Result<VBusAdc1, BQ25887Error<I2C::Error>> {
+        let reg = self.device.vbus_adc_1().read_async().await?;
+
+        let vbus_adc_msb = reg.vbus_adc_msb();
+
+        Ok(VBusAdc1::new().with_vbus_adc_msb(vbus_adc_msb))
+    }
+
+    /// ### Breif
+    /// Reads VBUS ADC 0 Register,
+    /// (Address = 0x1C) (reset = 0x00)
+    /// BQ255887 p.58
+    /// ### Errors
+    /// Returns an error if the I²C transaction fails
+    pub async fn read_vbus_adc_0(&mut self) -> Result<VBusAdc0, BQ25887Error<I2C::Error>> {
+        let reg = self.device.vbus_adc_0().read_async().await?;
+
+        let vbus_adc_lsb = reg.vbus_adc_lsb();
+
+        Ok(VBusAdc0::new().with_vbus_adc_lsb(vbus_adc_lsb))
+    }
+
+    /// ### Breif
+    /// Reads VBAT ADC 1 Register,
+    /// (Address = 0x1D) (reset = 0x00)
+    /// BQ255887 p.59
+    /// ### Errors
+    /// Returns an error if the I²C transaction fails
+    pub async fn read_vbat_adc_1(&mut self) -> Result<VBatAdc1, BQ25887Error<I2C::Error>> {
+        let reg = self.device.vbat_adc_1().read_async().await?;
+
+        let vbat_adc_msb = reg.vbat_adc_msb();
+
+        Ok(VBatAdc1::new().with_vbat_adc_msb(vbat_adc_msb))
+    }
+
+    /// ### Breif
+    /// Reads VBAT ADC 0 Register,
+    /// (Address = 0x1E) (reset = 0x00)
+    /// BQ255887 p.59
+    /// ### Errors
+    /// Returns an error if the I²C transaction fails
+    pub async fn read_vbat_adc_0(&mut self) -> Result<VBatAdc0, BQ25887Error<I2C::Error>> {
+        let reg = self.device.vbat_adc_0().read_async().await?;
+
+        let vbat_adc_lsb = reg.vbat_adc_lsb();
+
+        Ok(VBatAdc0::new().with_vbat_adc_lsb(vbat_adc_lsb))
+    }
+
+    /// ### Breif
+    /// Reads VCELLTOP ADC 1 Register,
+    /// (Address = 0x1F) (reset = 0x00)
+    /// BQ255887 p.60
+    /// ### Errors
+    /// Returns an error if the I²C transaction fails
+    pub async fn read_vcell_top_adc_1(&mut self) -> Result<VCellTopAdc1, BQ25887Error<I2C::Error>> {
+        let reg = self.device.vcelltop_adc_1().read_async().await?;
+
+        let vcelltop_adc_msb = reg.vcelltop_adc_msb();
+
+        Ok(VCellTopAdc1::new().with_vcelltop_adc_msb(vcelltop_adc_msb))
+    }
+
+    /// ### Breif
+    /// Reads VCELLTOP ADC 0 Register,
+    /// (Address = 0x20) (reset = 0x00)
+    /// BQ255887 p.60
+    /// ### Errors
+    /// Returns an error if the I²C transaction fails
+    pub async fn read_vcell_top_adc_0(&mut self) -> Result<VCellTopAdc0, BQ25887Error<I2C::Error>> {
+        let reg = self.device.vcelltop_adc_0().read_async().await?;
+
+        let vcelltop_adc_lsb = reg.vcelltop_adc_lsb();
+
+        Ok(VCellTopAdc0::new().with_vcelltop_adc_lsb(vcelltop_adc_lsb))
+    }
+
+    /// ### Breif
+    /// Reads TS ADC 1 Register,
+    /// (Address = 0x21) (reset = 0x00)
+    /// BQ255887 p.61
+    /// ### Errors
+    /// Returns an error if the I²C transaction fails
+    pub async fn read_ts_adc_1(&mut self) -> Result<TsAdc1, BQ25887Error<I2C::Error>> {
+        let reg = self.device.ts_adc_1().read_async().await?;
+
+        let ts_adc_msb = reg.ts_adc_msb();
+
+        Ok(TsAdc1::new().with_ts_adc_msb(ts_adc_msb))
+    }
+
+    /// ### Breif
+    /// Reads TS ADC 0 Register,
+    /// (Address = 0x22) (reset = 0x00)
+    /// BQ255887 p.61
+    /// ### Errors
+    /// Returns an error if the I²C transaction fails
+    pub async fn read_ts_adc_0(&mut self) -> Result<TsAdc0, BQ25887Error<I2C::Error>> {
+        let reg = self.device.ts_adc_0().read_async().await?;
+
+        let ts_adc_lsb = reg.ts_adc_lsb();
+
+        Ok(TsAdc0::new().with_ts_adc_lsb(ts_adc_lsb))
+    }
+
+    /// ### Breif
+    /// Reads TDIE ADC 1 Register,
+    /// (Address = 0x23) (reset = 0x00)
+    /// BQ255887 p.62
+    /// ### Errors
+    /// Returns an error if the I²C transaction fails
+    pub async fn read_tdie_adc_1(&mut self) -> Result<TdieAdc1, BQ25887Error<I2C::Error>> {
+        let reg = self.device.tdie_adc_1().read_async().await?;
+
+        let tdie_adc_msb = reg.tdie_adc_msb();
+
+        Ok(TdieAdc1::new().with_tdie_adc_msb(tdie_adc_msb))
+    }
+
+    /// ### Breif
+    /// Reads TDIE ADC 0 Register,
+    /// (Address = 0x24) (reset = 0x00)
+    /// BQ255887 p.62
+    /// ### Errors
+    /// Returns an error if the I²C transaction fails
+    pub async fn read_tdie_adc_0(&mut self) -> Result<TdieAdc0, BQ25887Error<I2C::Error>> {
+        let reg = self.device.tdie_adc_0().read_async().await?;
+
+        let tdie_adc_lsb = reg.tdie_adc_lsb();
+
+        Ok(TdieAdc0::new().with_tdie_adc_lsb(tdie_adc_lsb))
+    }
+
+    /// ### Breif
+    /// Reads Part Information Register,
+    /// (Address = 0x25) (reset = 0x28)
+    /// BQ255887 p.63
+    /// ### Errors
+    /// Returns an error if the I²C transaction fails or the register value cannot be parsed
+    pub async fn read_part_information(&mut self) -> Result<PartInformation, BQ25887Error<I2C::Error>> {
+        let reg = self.device.part_information().read_async().await?;
+
+        let reg_rst = u8::from(reg.reg_rst());
+        let pn = u8::from(reg.pn()?);
+        let dev_rev = reg.dev_rev();
+
+        Ok(PartInformation::new()
+            .with_reg_rst(reg_rst)
+            .with_pn(pn)
+            .with_dev_rev(dev_rev))
+    }
+
+    /// ### Breif
+    /// Writes Part Information Register,
+    /// (Address = 0x25) (reset = 0x28)
+    /// BQ255887 p.63
+    /// ### Errors
+    /// Returns an error if the I²C transaction fails
+    pub async fn write_part_information_reg_rst(
+        &mut self,
+        info: PartInformation,
+    ) -> Result<(), BQ25887Error<I2C::Error>> {
+        let mut buf = [0u8; LARGEST_REG_SIZE_BYTES];
+        buf[0] = info.bytes[0];
+        self.device
+            .interface()
+            .write_register(PART_INFORMATION_ADDR, LARGEST_REG_SIZE_BITS, &buf)
+            .await?;
+        Ok(())
+    }
+
+    /// ### Breif
+    /// Reads VCELLBOT ADC 1 Register,
+    /// (Address = 0x26) (reset = 0x00)
+    /// BQ255887 p.64
+    /// ### Errors
+    /// Returns an error if the I²C transaction fails
+    pub async fn read_vcellbot_adc_1(&mut self) -> Result<VCellBotAdc1, BQ25887Error<I2C::Error>> {
+        let reg = self.device.vcellbot_adc_1().read_async().await?;
+
+        let vcellbot_adc_msb = reg.vcellbot_adc_msb();
+
+        Ok(VCellBotAdc1::new().with_vcellbot_adc_msb(vcellbot_adc_msb))
+    }
+
+    /// ### Breif
+    /// Reads VCELLBOT ADC 0 Register,
+    /// (Address = 0x27) (reset = 0x00)
+    /// BQ255887 p.64
+    /// ### Errors
+    /// Returns an error if the I²C transaction fails
+    pub async fn read_vcellbot_adc_0(&mut self) -> Result<VCellBotAdc0, BQ25887Error<I2C::Error>> {
+        let reg = self.device.vcellbot_adc_0().read_async().await?;
+
+        let vcellbot_adc_lsb = reg.vcellbot_adc_lsb();
+
+        Ok(VCellBotAdc0::new().with_vcellbot_adc_lsb(vcellbot_adc_lsb))
+    }
+
+    /// ### Breif
+    /// Reads Cell Balancing Control 1 Register,
+    /// (Address = 0x28) (reset = 0x2A)
+    /// BQ255887 p.65
+    /// ### Errors
+    /// Returns an error if the I²C transaction fails
+    pub async fn read_cell_balancing_control_1(&mut self) -> Result<CellBalancingControl1, BQ25887Error<I2C::Error>> {
+        let reg = self.device.cell_balance_ctrl_1().read_async().await?;
+
+        let vdiff_end_offset = u8::from(reg.vdiff_end_offset());
+        let tcb_qual_interval = u8::from(reg.tcb_qual_interval());
+        let tcb_active = u8::from(reg.tcb_active());
+        let tsettle = u8::from(reg.tsettle());
+
+        Ok(CellBalancingControl1::new()
+            .with_vdiff_end_offset(vdiff_end_offset)
+            .with_tcb_qual_interval(tcb_qual_interval)
+            .with_tcb_active(tcb_active)
+            .with_tsettle(tsettle))
+    }
+
+    /// ### Breif
+    /// Writes Cell Balancing Control 1 Register,
+    /// (Address = 0x28) (reset = 0x2A)
+    /// BQ255887 p.65
+    /// ### Errors
+    /// Returns an error if the I²C transaction fails
+    pub async fn write_cell_balancing_control_1(
+        &mut self,
+        control: CellBalancingControl1,
+    ) -> Result<(), BQ25887Error<I2C::Error>> {
+        let mut buf = [0u8; LARGEST_REG_SIZE_BYTES];
+        buf[0] = control.bytes[0];
+        self.device
+            .interface()
+            .write_register(CELL_BALANCING_CONTROL_1_ADDR, LARGEST_REG_SIZE_BITS, &buf)
+            .await?;
+        Ok(())
+    }
+
+    /// ### Breif
+    /// Reads Cell Balancing Control 2 Register,
+    /// (Address = 0x29) (reset = 0xF4)
+    /// BQ255887 p.66
+    /// ### Errors
+    /// Returns an error if the I²C transaction fails
+    pub async fn read_cell_balancing_control_2(&mut self) -> Result<CellBalancingControl2, BQ25887Error<I2C::Error>> {
+        let reg = self.device.cell_balance_ctrl_2().read_async().await?;
+
+        let vqual = u8::from(reg.vqual_th());
+        let vdiff = u8::from(reg.vdiff_start());
+
+        Ok(CellBalancingControl2::new()
+            .with_vqual_th(vqual)
+            .with_vdiff_start(vdiff))
+    }
+
+    /// ### Breif
+    /// Writes Cell Balancing Control 2 Register,
+    /// (Address = 0x29) (reset = 0xF4)
+    /// BQ255887 p.66
+    /// ### Errors
+    /// Returns an error if the I²C transaction fails
+    pub async fn write_cell_balancing_control_2(
+        &mut self,
+        control: CellBalancingControl2,
+    ) -> Result<(), BQ25887Error<I2C::Error>> {
+        let mut buf = [0u8; LARGEST_REG_SIZE_BYTES];
+        buf[0] = control.bytes[0];
+        self.device
+            .interface()
+            .write_register(CELL_BALANCING_CONTROL_2_ADDR, LARGEST_REG_SIZE_BITS, &buf)
+            .await?;
+        Ok(())
+    }
+
+    /// ### Breif
+    /// Reads Cell Balancing Status and Control Register,
+    /// (Address = 0x2A) (reset = 0x81)
+    /// BQ255887 p.67
+    /// ### Errors
+    /// Returns an error if the I²C transaction fails
+    pub async fn read_cell_balancing_status_and_control(
+        &mut self,
+    ) -> Result<CellBalancingStatusAndControl, BQ25887Error<I2C::Error>> {
+        let reg = self.device.cell_balance_stat_ctrl().read_async().await?;
+
+        let cb_chg_dis = u8::from(reg.cb_chg_dis());
+        let cb_auto_en = u8::from(reg.cb_auto_en());
+        let cb = u8::from(reg.cb_stat());
+        let hs_cv_stat = u8::from(reg.hs_cv_stat());
+        let ls_cv_stat = u8::from(reg.ls_cv_stat());
+        let hs_ov = u8::from(reg.hs_ov_stat());
+        let ls_ov = u8::from(reg.ls_ov_stat());
+        let cb_oc = u8::from(reg.cb_oc_stat());
+
+        Ok(CellBalancingStatusAndControl::new()
+            .with_cb_chg_dis(cb_chg_dis)
+            .with_cb_auto_en(cb_auto_en)
+            .with_cb_stat(cb)
+            .with_hs_cv_stat(hs_cv_stat)
+            .with_ls_cv_stat(ls_cv_stat)
+            .with_hs_ov_stat(hs_ov)
+            .with_ls_ov_stat(ls_ov)
+            .with_cb_oc_stat(cb_oc))
+    }
+
+    /// ### Breif
+    /// Writes Cell Balancing Status and Control Register,
+    /// (Address = 0x2A) (reset = 0x81)
+    /// BQ255887 p.67
+    /// ### Errors
+    /// Returns an error if the I²C transaction fails
+    pub async fn write_cell_balancing_status_and_control(
+        &mut self,
+        control: CellBalancingStatusAndControl,
+    ) -> Result<(), BQ25887Error<I2C::Error>> {
+        let mut buf = [0u8; LARGEST_REG_SIZE_BYTES];
+        buf[0] = control.bytes[0];
+        self.device
+            .interface()
+            .write_register(CELL_BALANCING_STATUS_AND_CONTROL_ADDR, LARGEST_REG_SIZE_BITS, &buf)
+            .await?;
+        Ok(())
+    }
+
+    /// ### Breif
+    /// Reads Cell Balancing Flag Register,
+    /// (Address = 0x2B) (reset = 0x00)
+    /// BQ255887 p.68
+    /// ### Errors
+    /// Returns an error if the I²C transaction fails
+    pub async fn read_cell_balancing_flag(&mut self) -> Result<CellBalancingFlag, BQ25887Error<I2C::Error>> {
+        let reg = self.device.cell_balance_flag().read_async().await?;
+
+        let qcbh_en = u8::from(reg.qcbh_en());
+        let qcbl = u8::from(reg.qcbl_en());
+        let cb_flag = u8::from(reg.cb_flag());
+        let hs_cv_flag = u8::from(reg.hs_cv_flag());
+        let ls_cv_flag = u8::from(reg.ls_cv_flag());
+        let hs_ov = u8::from(reg.hs_ov_flag());
+        let ls_ov = u8::from(reg.ls_ov_flag());
+        let cb_oc_flag = u8::from(reg.cb_oc_flag());
+
+        Ok(CellBalancingFlag::new()
+            .with_qcbh_en(qcbh_en)
+            .with_qcbl_en(qcbl)
+            .with_cb_flag(cb_flag)
+            .with_hs_cv_flag(hs_cv_flag)
+            .with_ls_cv_flag(ls_cv_flag)
+            .with_hs_ov_flag(hs_ov)
+            .with_ls_ov_flag(ls_ov)
+            .with_cb_oc_flag(cb_oc_flag))
+    }
+
+    /// ### Breif
+    /// Writes Cell Balancing Flag Register,
+    /// (Address = 0x2B) (reset = 0x00)
+    /// BQ255887 p.68
+    /// ### Errors
+    /// Returns an error if the I²C transaction fails
+    pub async fn write_cell_balancing_flag(&mut self, flag: CellBalancingFlag) -> Result<(), BQ25887Error<I2C::Error>> {
+        let mut buf = [0u8; LARGEST_REG_SIZE_BYTES];
+        buf[0] = flag.bytes[0];
+        self.device
+            .interface()
+            .write_register(CELL_BALANCING_FLAG_ADDR, LARGEST_REG_SIZE_BITS, &buf)
+            .await?;
+        Ok(())
+    }
+
+    /// ### Breif
+    /// Reads Cell Balancing Mask Register,
+    /// (Address = 0x2C) (reset = 0x00)
+    /// BQ255887 p.68
+    /// ### Errors
+    /// Returns an error if the I²C transaction fails
+    pub async fn read_cell_balancing_mask(&mut self) -> Result<CellBalancingMask, BQ25887Error<I2C::Error>> {
+        let reg = self.device.cell_balance_mask().read_async().await?;
+
+        let cb_mask = u8::from(reg.cb_mask());
+        let hs_cv_mask = u8::from(reg.hs_cv_mask());
+        let ls_cv_mask = u8::from(reg.ls_cv_mask());
+        let hs_ov = u8::from(reg.hs_ov_mask());
+        let ls_ov = u8::from(reg.ls_ov_mask());
+        let cb_oc = u8::from(reg.cb_oc_mask());
+
+        Ok(CellBalancingMask::new()
+            .with_cb_mask(cb_mask)
+            .with_hs_cv_mask(hs_cv_mask)
+            .with_ls_cv_mask(ls_cv_mask)
+            .with_hs_ov_mask(hs_ov)
+            .with_ls_ov_mask(ls_ov)
+            .with_cb_oc_mask(cb_oc))
+    }
+
+    /// ### Breif
+    /// Writes Cell Balancing Mask Register,
+    /// (Address = 0x2C) (reset = 0x00)
+    /// BQ255887 p.68
+    /// ### Errors
+    /// Returns an error if the I²C transaction fails
+    pub async fn write_cell_balancing_mask(&mut self, mask: CellBalancingMask) -> Result<(), BQ25887Error<I2C::Error>> {
+        let mut buf = [0u8; LARGEST_REG_SIZE_BYTES];
+        buf[0] = mask.bytes[0];
+        self.device
+            .interface()
+            .write_register(CELL_BALANCING_MASK_ADDR, LARGEST_REG_SIZE_BITS, &buf)
+            .await?;
+        Ok(())
+    }
 }
