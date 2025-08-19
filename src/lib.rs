@@ -21,31 +21,9 @@ use defmt::{Format, Formatter, write};
 use device_driver::AsyncRegisterInterface;
 use embedded_hal_async::i2c::I2c as I2cTrait;
 
+const BQ_ADDR: u8 = 0x6A;
 const LARGEST_REG_SIZE_BYTES: usize = 0x01;
 const LARGEST_REG_SIZE_BITS: u32 = 0x08;
-
-//todo change to enum
-const CHARGE_CURRENT_LIMIT_ADDR: u8 = 0x01;
-const INPUT_VOLTAGE_LIMIT_ADDR: u8 = 0x02;
-const INPUT_CURRENT_LIMIT_ADDR: u8 = 0x03;
-const PRECHARGE_AND_TERMINATION_CURRENT_ADDR: u8 = 0x04;
-const CHARGER_CONTROL_1_ADDR: u8 = 0x05;
-const CHARGER_CONTROL_2_ADDR: u8 = 0x06;
-const CHARGER_CONTROL_3_ADDR: u8 = 0x07;
-const CHARGER_CONTROL_4_ADDR: u8 = 0x08;
-const CHARGER_MASK_1_ADDR: u8 = 0x12;
-const CHARGER_MASK_2_ADDR: u8 = 0x13;
-const FAULT_MASK_ADDR: u8 = 0x14;
-const ADC_CONTROL_ADDR: u8 = 0x15;
-const ADC_FUNCTION_DISABLE_ADDR: u8 = 0x16;
-const PART_INFORMATION_ADDR: u8 = 0x25;
-const CELL_BALANCING_CONTROL_1_ADDR: u8 = 0x28;
-const CELL_BALANCING_CONTROL_2_ADDR: u8 = 0x29;
-const CELL_BALANCING_STATUS_AND_CONTROL_ADDR: u8 = 0x2A;
-const CELL_BALANCING_FLAG_ADDR: u8 = 0x2B;
-const CELL_BALANCING_MASK_ADDR: u8 = 0x2C;
-
-const BQ_ADDR: u8 = 0x6A;
 
 device_driver::create_device!(
     device_name: Bq25887,
@@ -175,7 +153,7 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
         buf[0] = current_limit.into();
         self.device
             .interface()
-            .write_register(CHARGE_CURRENT_LIMIT_ADDR, LARGEST_REG_SIZE_BITS, &buf)
+            .write_register(RegisterAddr::ChargeCurrentLimit.value(), LARGEST_REG_SIZE_BITS, &buf)
             .await?;
         Ok(())
     }
@@ -215,7 +193,7 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
         buf[0] = input_volt_limit.into();
         self.device
             .interface()
-            .write_register(INPUT_VOLTAGE_LIMIT_ADDR, LARGEST_REG_SIZE_BITS, &buf)
+            .write_register(RegisterAddr::InputVoltageLimit.value(), LARGEST_REG_SIZE_BITS, &buf)
             .await?;
         Ok(())
     }
@@ -255,7 +233,7 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
         buf[0] = current_limit.into();
         self.device
             .interface()
-            .write_register(INPUT_CURRENT_LIMIT_ADDR, LARGEST_REG_SIZE_BITS, &buf)
+            .write_register(RegisterAddr::InputCurrentLimit.value(), LARGEST_REG_SIZE_BITS, &buf)
             .await?;
         Ok(())
     }
@@ -293,7 +271,11 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
         buf[0] = current_limit.into();
         self.device
             .interface()
-            .write_register(PRECHARGE_AND_TERMINATION_CURRENT_ADDR, LARGEST_REG_SIZE_BITS, &buf)
+            .write_register(
+                RegisterAddr::PrechargeAndTerminationCurrentLimit.value(),
+                LARGEST_REG_SIZE_BITS,
+                &buf,
+            )
             .await?;
         Ok(())
     }
@@ -334,7 +316,7 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
         buf[0] = control.into();
         self.device
             .interface()
-            .write_register(CHARGER_CONTROL_1_ADDR, LARGEST_REG_SIZE_BITS, &buf)
+            .write_register(RegisterAddr::ChargerControl1.value(), LARGEST_REG_SIZE_BITS, &buf)
             .await?;
         Ok(())
     }
@@ -373,7 +355,7 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
         buf[0] = control.into();
         self.device
             .interface()
-            .write_register(CHARGER_CONTROL_2_ADDR, LARGEST_REG_SIZE_BITS, &buf)
+            .write_register(RegisterAddr::ChargerControl2.value(), LARGEST_REG_SIZE_BITS, &buf)
             .await?;
         Ok(())
     }
@@ -408,7 +390,7 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
         buf[0] = control.into();
         self.device
             .interface()
-            .write_register(CHARGER_CONTROL_3_ADDR, LARGEST_REG_SIZE_BITS, &buf)
+            .write_register(RegisterAddr::ChargerControl3.value(), LARGEST_REG_SIZE_BITS, &buf)
             .await?;
         Ok(())
     }
@@ -443,7 +425,7 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
         buf[0] = control.into();
         self.device
             .interface()
-            .write_register(CHARGER_CONTROL_4_ADDR, LARGEST_REG_SIZE_BITS, &buf)
+            .write_register(RegisterAddr::ChargerControl4.value(), LARGEST_REG_SIZE_BITS, &buf)
             .await?;
         Ok(())
     }
@@ -634,7 +616,7 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
         buf[0] = mask.into();
         self.device
             .interface()
-            .write_register(CHARGER_MASK_1_ADDR, LARGEST_REG_SIZE_BITS, &buf)
+            .write_register(RegisterAddr::ChargerMask1.value(), LARGEST_REG_SIZE_BITS, &buf)
             .await?;
         Ok(())
     }
@@ -671,7 +653,7 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
         buf[0] = mask.into();
         self.device
             .interface()
-            .write_register(CHARGER_MASK_2_ADDR, LARGEST_REG_SIZE_BITS, &buf)
+            .write_register(RegisterAddr::ChargerMask2.value(), LARGEST_REG_SIZE_BITS, &buf)
             .await?;
         Ok(())
     }
@@ -708,7 +690,7 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
         buf[0] = mask.into();
         self.device
             .interface()
-            .write_register(FAULT_MASK_ADDR, LARGEST_REG_SIZE_BITS, &buf)
+            .write_register(RegisterAddr::FaultMask.value(), LARGEST_REG_SIZE_BITS, &buf)
             .await?;
         Ok(())
     }
@@ -743,7 +725,7 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
         buf[0] = control.into();
         self.device
             .interface()
-            .write_register(ADC_CONTROL_ADDR, LARGEST_REG_SIZE_BITS, &buf)
+            .write_register(RegisterAddr::AdcControl.value(), LARGEST_REG_SIZE_BITS, &buf)
             .await?;
         Ok(())
     }
@@ -789,7 +771,7 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
         buf[0] = function.into();
         self.device
             .interface()
-            .write_register(ADC_FUNCTION_DISABLE_ADDR, LARGEST_REG_SIZE_BITS, &buf)
+            .write_register(RegisterAddr::AdcFunctionDisable.value(), LARGEST_REG_SIZE_BITS, &buf)
             .await?;
         Ok(())
     }
@@ -1023,7 +1005,7 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
         buf[0] = info.into();
         self.device
             .interface()
-            .write_register(PART_INFORMATION_ADDR, LARGEST_REG_SIZE_BITS, &buf)
+            .write_register(RegisterAddr::PartInformation.value(), LARGEST_REG_SIZE_BITS, &buf)
             .await?;
         Ok(())
     }
@@ -1091,7 +1073,7 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
         buf[0] = control.into();
         self.device
             .interface()
-            .write_register(CELL_BALANCING_CONTROL_1_ADDR, LARGEST_REG_SIZE_BITS, &buf)
+            .write_register(RegisterAddr::CellBalancingControl1.value(), LARGEST_REG_SIZE_BITS, &buf)
             .await?;
         Ok(())
     }
@@ -1127,7 +1109,7 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
         buf[0] = control.into();
         self.device
             .interface()
-            .write_register(CELL_BALANCING_CONTROL_2_ADDR, LARGEST_REG_SIZE_BITS, &buf)
+            .write_register(RegisterAddr::CellBalancingControl2.value(), LARGEST_REG_SIZE_BITS, &buf)
             .await?;
         Ok(())
     }
@@ -1177,7 +1159,11 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
         buf[0] = control.into();
         self.device
             .interface()
-            .write_register(CELL_BALANCING_STATUS_AND_CONTROL_ADDR, LARGEST_REG_SIZE_BITS, &buf)
+            .write_register(
+                RegisterAddr::CellBalancingStatusAndControl.value(),
+                LARGEST_REG_SIZE_BITS,
+                &buf,
+            )
             .await?;
         Ok(())
     }
@@ -1222,7 +1208,7 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
         buf[0] = flag.into();
         self.device
             .interface()
-            .write_register(CELL_BALANCING_FLAG_ADDR, LARGEST_REG_SIZE_BITS, &buf)
+            .write_register(RegisterAddr::CellBalancingFlag.value(), LARGEST_REG_SIZE_BITS, &buf)
             .await?;
         Ok(())
     }
@@ -1263,7 +1249,7 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
         buf[0] = mask.into();
         self.device
             .interface()
-            .write_register(CELL_BALANCING_MASK_ADDR, LARGEST_REG_SIZE_BITS, &buf)
+            .write_register(RegisterAddr::CellBalancingMask.value(), LARGEST_REG_SIZE_BITS, &buf)
             .await?;
         Ok(())
     }

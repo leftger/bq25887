@@ -1,5 +1,53 @@
 use modular_bitfield::prelude::*;
 
+pub enum RegisterAddr {
+    ChargeCurrentLimit,
+    InputVoltageLimit,
+    InputCurrentLimit,
+    PrechargeAndTerminationCurrentLimit,
+    ChargerControl1,
+    ChargerControl2,
+    ChargerControl3,
+    ChargerControl4,
+    ChargerMask1,
+    ChargerMask2,
+    FaultMask,
+    AdcControl,
+    AdcFunctionDisable,
+    PartInformation,
+    CellBalancingControl1,
+    CellBalancingControl2,
+    CellBalancingStatusAndControl,
+    CellBalancingFlag,
+    CellBalancingMask,
+}
+
+impl RegisterAddr {
+    pub fn value(&self) -> u8 {
+        match self {
+            RegisterAddr::ChargeCurrentLimit => 0x01,
+            RegisterAddr::InputVoltageLimit => 0x02,
+            RegisterAddr::InputCurrentLimit => 0x03,
+            RegisterAddr::PrechargeAndTerminationCurrentLimit => 0x04,
+            RegisterAddr::ChargerControl1 => 0x05,
+            RegisterAddr::ChargerControl2 => 0x06,
+            RegisterAddr::ChargerControl3 => 0x07,
+            RegisterAddr::ChargerControl4 => 0x08,
+            RegisterAddr::ChargerMask1 => 0x12,
+            RegisterAddr::ChargerMask2 => 0x13,
+            RegisterAddr::FaultMask => 0x14,
+            RegisterAddr::AdcControl => 0x15,
+            RegisterAddr::AdcFunctionDisable => 0x16,
+            RegisterAddr::PartInformation => 0x25,
+            RegisterAddr::CellBalancingControl1 => 0x28,
+            RegisterAddr::CellBalancingControl2 => 0x29,
+            RegisterAddr::CellBalancingStatusAndControl => 0x2A,
+            RegisterAddr::CellBalancingFlag => 0x2B,
+            RegisterAddr::CellBalancingMask => 0x2C,
+        }
+    }
+}
+
 #[bitfield]
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "defmt-03", derive(defmt::Format))]
