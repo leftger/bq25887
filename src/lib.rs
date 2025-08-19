@@ -11,11 +11,15 @@
 #![doc = include_str!("../README.md")]
 #![cfg_attr(not(test), no_std)]
 #![allow(missing_docs)]
+
+mod registers;
+#[allow(clippy::wildcard_imports)]
+use crate::registers::*;
+
 #[cfg(feature = "defmt-03")]
 use defmt::{Format, Formatter, write};
 use device_driver::AsyncRegisterInterface;
 use embedded_hal_async::i2c::I2c as I2cTrait;
-use modular_bitfield::prelude::*;
 
 const LARGEST_REG_SIZE_BYTES: usize = 0x01;
 const LARGEST_REG_SIZE_BITS: u32 = 0x08;
@@ -102,453 +106,6 @@ pub struct Bq25887Driver<I2C: I2cTrait> {
     device: Bq25887<DeviceInterface<I2C>>,
 }
 
-#[bitfield]
-#[derive(Default, Debug, Clone, Copy, PartialEq, Eq)]
-#[cfg_attr(feature = "defmt-03", derive(defmt::Format))]
-pub struct VoltageRegulationLimit {
-    pub vcellreg: B8, //todo: Should create millivolt helper impl
-}
-
-#[bitfield]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-#[cfg_attr(feature = "defmt-03", derive(defmt::Format))]
-pub struct ChargeCurrentLimit {
-    pub ichg: B6,
-    pub en_ilim: B1,
-    pub en_hiz: B1,
-}
-
-#[bitfield]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-#[cfg_attr(feature = "defmt-03", derive(defmt::Format))]
-pub struct InputVoltageLimit {
-    pub vindpm: B5,
-    pub pfm_ooa_dis: B1,
-    pub en_bat_dischg: B1,
-    pub en_vindpm_rst: B1,
-}
-
-#[bitfield]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-#[cfg_attr(feature = "defmt-03", derive(defmt::Format))]
-pub struct InputCurrentLimit {
-    pub iindpm: B5,
-    pub en_ico: B1,
-    pub force_indet: B1,
-    pub force_ico: B1,
-}
-
-#[bitfield]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-#[cfg_attr(feature = "defmt-03", derive(defmt::Format))]
-pub struct PrechargeAndTerminationCurrentLimit {
-    pub iterm: B4,
-    pub iprechg: B4,
-}
-
-#[bitfield]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-#[cfg_attr(feature = "defmt-03", derive(defmt::Format))]
-pub struct ChargerControl1 {
-    pub tmr2x_en: B1,
-    pub chg_timer: B2,
-    pub en_timer: B1,
-    pub watchdog: B2,
-    pub stat_dis: B1,
-    pub en_term: B1,
-}
-
-#[bitfield]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-#[cfg_attr(feature = "defmt-03", derive(defmt::Format))]
-pub struct ChargerControl2 {
-    pub vrechg: B2,
-    pub celllowv: B1,
-    pub en_chg: B1,
-    pub treg: B2,
-    pub auto_indet_en: B1,
-    #[skip(setters, getters)]
-    reseved: B1,
-}
-
-#[bitfield]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-#[cfg_attr(feature = "defmt-03", derive(defmt::Format))]
-pub struct ChargerControl3 {
-    #[skip(setters, getters)]
-    reserved: B4,
-    pub topoff_timer: B2,
-    pub wd_rst: B1,
-    pub pfm_dis: B1,
-}
-
-#[bitfield]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-#[cfg_attr(feature = "defmt-03", derive(defmt::Format))]
-pub struct ChargerControl4 {
-    pub jeita_isetc: B2,
-    pub jeita_iseth: B1,
-    pub jeita_vset: B2,
-    #[skip(setters, getters)]
-    reserved: B3,
-}
-
-#[bitfield]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-#[cfg_attr(feature = "defmt-03", derive(defmt::Format))]
-pub struct IcoCurrentLimitInUse {
-    pub ico_ilim: B5,
-    #[skip(setters, getters)]
-    reserved: B3,
-}
-
-#[bitfield]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-#[cfg_attr(feature = "defmt-03", derive(defmt::Format))]
-pub struct ChargerStatus1 {
-    pub chrg_stat: B3,
-    pub wd_stat: B1,
-    pub treg_stat: B1,
-    pub vindpm_stat: B1,
-    pub iindpm_stat: B1,
-    #[skip(setters, getters)]
-    reserved: B1,
-}
-
-#[bitfield]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-#[cfg_attr(feature = "defmt-03", derive(defmt::Format))]
-pub struct ChargerStatus2 {
-    #[skip(setters, getters)]
-    reserved_1: B1,
-    pub ico_stat: B2,
-    #[skip(setters, getters)]
-    reserved_2: B1,
-    pub vbus_stat: B3,
-    pub pg_stat: B1,
-}
-
-#[bitfield]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-#[cfg_attr(feature = "defmt-03", derive(defmt::Format))]
-pub struct NTCStatus {
-    pub ts_stat: B3,
-    #[skip(setters, getters)]
-    reserved: B5,
-}
-
-#[bitfield]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-#[cfg_attr(feature = "defmt-03", derive(defmt::Format))]
-pub struct FaultStatus {
-    #[skip(setters, getters)]
-    reserved_1: B1,
-    #[skip(setters, getters)]
-    reserved_2: B3,
-    pub tmr_stat: B1,
-    #[skip(setters, getters)]
-    reserved_3: B1,
-    pub tshut_stat: B1,
-    pub vbus_ovp_stat: B1,
-}
-
-#[bitfield]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-#[cfg_attr(feature = "defmt-03", derive(defmt::Format))]
-pub struct ChargerFlag1 {
-    pub chrg_flag: B1,
-    #[skip(setters, getters)]
-    reserved_1: B2,
-    pub wd_flag: B1,
-    pub treg_flag: B1,
-    pub vindpm_flag: B1,
-    pub iindpm_flag: B1,
-    #[skip(setters, getters)]
-    reserved_2: B1,
-}
-
-#[bitfield]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-#[cfg_attr(feature = "defmt-03", derive(defmt::Format))]
-pub struct ChargerFlag2 {
-    #[skip(setters, getters)]
-    reserved_1: B1,
-    pub ico_flag: B1,
-    pub ts_flag: B1,
-    #[skip(setters, getters)]
-    reserved_2: B1,
-    pub vbus_flag: B1,
-    #[skip(setters, getters)]
-    reserved_3: B2,
-    pub pg_flag: B1,
-}
-
-#[bitfield]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-#[cfg_attr(feature = "defmt-03", derive(defmt::Format))]
-pub struct FaultFlag {
-    #[skip(setters, getters)]
-    reserved_1: B4,
-    pub tmr_flag: B1,
-    #[skip(setters, getters)]
-    reserved_2: B1,
-    pub tshut_flag: B1,
-    pub vbus_ovp_flag: B1,
-}
-
-#[bitfield]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-#[cfg_attr(feature = "defmt-03", derive(defmt::Format))]
-pub struct ChargerMask1 {
-    pub chrg_mask: B1,
-    #[skip(setters, getters)]
-    reserved: B2,
-    pub wd_mask: B1,
-    pub treg_mask: B1,
-    pub vinpdm_mask: B1,
-    pub iindpm_mask: B1,
-    pub adc_done_mask: B1,
-}
-
-#[bitfield]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-#[cfg_attr(feature = "defmt-03", derive(defmt::Format))]
-pub struct ChargerMask2 {
-    #[skip(setters, getters)]
-    reserved_1: B1,
-    pub ico_mask: B1,
-    pub ts_mask: B1,
-    #[skip(setters, getters)]
-    reserved_2: B1,
-    pub vbus_mask: B1,
-    #[skip(setters, getters)]
-    reserved_3: B2,
-    pub pg_mask: B1,
-}
-
-#[bitfield]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-#[cfg_attr(feature = "defmt-03", derive(defmt::Format))]
-pub struct FaultMask {
-    #[skip(setters, getters)]
-    reserved_1: B3,
-    pub sns_short_mask: B1,
-    pub tmr_mask: B1,
-    #[skip(setters, getters)]
-    reserved_2: B1,
-    pub tshut_mask: B1,
-    pub vbus_ovp_mask: B1,
-}
-
-#[bitfield]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-#[cfg_attr(feature = "defmt-03", derive(defmt::Format))]
-pub struct AdcControl {
-    #[skip(setters, getters)]
-    reserved: B4,
-    pub adc_sample: B2,
-    pub adc_rate: B1,
-    pub adc_en: B1,
-}
-
-#[bitfield]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-#[cfg_attr(feature = "defmt-03", derive(defmt::Format))]
-pub struct AdcFunctionDisable {
-    pub tdie_adc_dis: B1,
-    pub vcell_adc_dis: B1,
-    pub ts_adc_dis: B1,
-    #[skip(setters, getters)]
-    reserved: B1,
-    pub vbat_adc_dis: B1,
-    pub vbus_adc_dis: B1,
-    pub ichg_adc_dis: B1,
-    pub ibus_adc_dis: B1,
-}
-
-#[bitfield]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-#[cfg_attr(feature = "defmt-03", derive(defmt::Format))]
-pub struct IbusAdc1 {
-    pub ibus_adc_msb: B8,
-}
-
-#[bitfield]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-#[cfg_attr(feature = "defmt-03", derive(defmt::Format))]
-pub struct IbusAdc0 {
-    pub ibus_adc_lsb: B8,
-}
-
-#[bitfield]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-#[cfg_attr(feature = "defmt-03", derive(defmt::Format))]
-pub struct IChgAdc1 {
-    pub ichg_adc_msb: B8,
-}
-
-#[bitfield]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-#[cfg_attr(feature = "defmt-03", derive(defmt::Format))]
-pub struct IChgAdc0 {
-    pub ichg_adc_lsb: B8,
-}
-
-#[bitfield]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-#[cfg_attr(feature = "defmt-03", derive(defmt::Format))]
-pub struct VBusAdc1 {
-    pub vbus_adc_msb: B8,
-}
-
-#[bitfield]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-#[cfg_attr(feature = "defmt-03", derive(defmt::Format))]
-pub struct VBusAdc0 {
-    pub vbus_adc_lsb: B8,
-}
-
-#[bitfield]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-#[cfg_attr(feature = "defmt-03", derive(defmt::Format))]
-pub struct VBatAdc1 {
-    pub vbat_adc_msb: B8,
-}
-
-#[bitfield]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-#[cfg_attr(feature = "defmt-03", derive(defmt::Format))]
-pub struct VBatAdc0 {
-    pub vbat_adc_lsb: B8,
-}
-
-#[bitfield]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-#[cfg_attr(feature = "defmt-03", derive(defmt::Format))]
-pub struct VCellTopAdc1 {
-    pub vcelltop_adc_msb: B8,
-}
-
-#[bitfield]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-#[cfg_attr(feature = "defmt-03", derive(defmt::Format))]
-pub struct VCellTopAdc0 {
-    pub vcelltop_adc_lsb: B8,
-}
-
-#[bitfield]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-#[cfg_attr(feature = "defmt-03", derive(defmt::Format))]
-pub struct TsAdc1 {
-    pub ts_adc_msb: B8,
-}
-
-#[bitfield]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-#[cfg_attr(feature = "defmt-03", derive(defmt::Format))]
-pub struct TsAdc0 {
-    pub ts_adc_lsb: B8,
-}
-
-#[bitfield]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-#[cfg_attr(feature = "defmt-03", derive(defmt::Format))]
-pub struct TdieAdc1 {
-    pub tdie_adc_msb: B8,
-}
-
-#[bitfield]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-#[cfg_attr(feature = "defmt-03", derive(defmt::Format))]
-pub struct TdieAdc0 {
-    pub tdie_adc_lsb: B8,
-}
-
-#[bitfield]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-#[cfg_attr(feature = "defmt-03", derive(defmt::Format))]
-pub struct PartInformation {
-    pub dev_rev: B3,
-    pub pn: B4,
-    pub reg_rst: B1,
-}
-
-#[bitfield]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-#[cfg_attr(feature = "defmt-03", derive(defmt::Format))]
-pub struct VCellBotAdc1 {
-    pub vcellbot_adc_msb: B8,
-}
-
-#[bitfield]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-#[cfg_attr(feature = "defmt-03", derive(defmt::Format))]
-pub struct VCellBotAdc0 {
-    pub vcellbot_adc_lsb: B8,
-}
-
-#[bitfield]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-#[cfg_attr(feature = "defmt-03", derive(defmt::Format))]
-pub struct CellBalancingControl1 {
-    pub tsettle: B2,
-    pub tcb_active: B2,
-    pub tcb_qual_interval: B1,
-    pub vdiff_end_offset: B3,
-}
-
-#[bitfield]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-#[cfg_attr(feature = "defmt-03", derive(defmt::Format))]
-pub struct CellBalancingControl2 {
-    pub vdiff_start: B4,
-    pub vqual_th: B4,
-}
-
-#[bitfield]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-#[cfg_attr(feature = "defmt-03", derive(defmt::Format))]
-pub struct CellBalancingStatusAndControl {
-    pub cb_oc_stat: B1,
-    pub ls_ov_stat: B1,
-    pub hs_ov_stat: B1,
-    pub ls_cv_stat: B1,
-    pub hs_cv_stat: B1,
-    pub cb_stat: B1,
-    pub cb_auto_en: B1,
-    pub cb_chg_dis: B1,
-}
-
-#[bitfield]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-#[cfg_attr(feature = "defmt-03", derive(defmt::Format))]
-pub struct CellBalancingFlag {
-    pub cb_oc_flag: B1,
-    pub ls_ov_flag: B1,
-    pub hs_ov_flag: B1,
-    pub ls_cv_flag: B1,
-    pub hs_cv_flag: B1,
-    pub cb_flag: B1,
-    pub qcbl_en: B1,
-    pub qcbh_en: B1,
-}
-
-#[bitfield]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-#[cfg_attr(feature = "defmt-03", derive(defmt::Format))]
-pub struct CellBalancingMask {
-    pub cb_oc_mask: B1,
-    pub ls_ov_mask: B1,
-    pub hs_ov_mask: B1,
-    pub ls_cv_mask: B1,
-    pub hs_cv_mask: B1,
-    pub cb_mask: B1,
-    #[skip(setters, getters)]
-    reserved: B2,
-}
-
-// ------------------------------------------------------------------------------------
-
 impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     pub fn new(i2c: I2C) -> Self {
         Bq25887Driver {
@@ -615,7 +172,7 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
         current_limit: ChargeCurrentLimit,
     ) -> Result<(), BQ25887Error<I2C::Error>> {
         let mut buf = [0u8; LARGEST_REG_SIZE_BYTES];
-        buf[0] = current_limit.bytes[0];
+        buf[0] = current_limit.into();
         self.device
             .interface()
             .write_register(CHARGE_CURRENT_LIMIT_ADDR, LARGEST_REG_SIZE_BITS, &buf)
@@ -655,7 +212,7 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
         input_volt_limit: InputVoltageLimit,
     ) -> Result<(), BQ25887Error<I2C::Error>> {
         let mut buf = [0u8; LARGEST_REG_SIZE_BYTES];
-        buf[0] = input_volt_limit.bytes[0];
+        buf[0] = input_volt_limit.into();
         self.device
             .interface()
             .write_register(INPUT_VOLTAGE_LIMIT_ADDR, LARGEST_REG_SIZE_BITS, &buf)
@@ -695,7 +252,7 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
         current_limit: InputCurrentLimit,
     ) -> Result<(), BQ25887Error<I2C::Error>> {
         let mut buf = [0u8; LARGEST_REG_SIZE_BYTES];
-        buf[0] = current_limit.bytes[0];
+        buf[0] = current_limit.into();
         self.device
             .interface()
             .write_register(INPUT_CURRENT_LIMIT_ADDR, LARGEST_REG_SIZE_BITS, &buf)
@@ -733,7 +290,7 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
         current_limit: PrechargeAndTerminationCurrentLimit,
     ) -> Result<(), BQ25887Error<I2C::Error>> {
         let mut buf = [0u8; LARGEST_REG_SIZE_BYTES];
-        buf[0] = current_limit.bytes[0];
+        buf[0] = current_limit.into();
         self.device
             .interface()
             .write_register(PRECHARGE_AND_TERMINATION_CURRENT_ADDR, LARGEST_REG_SIZE_BITS, &buf)
@@ -774,7 +331,7 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     /// Returns an error if the I²C transaction fails
     pub async fn write_charger_control_1(&mut self, control: ChargerControl1) -> Result<(), BQ25887Error<I2C::Error>> {
         let mut buf = [0u8; LARGEST_REG_SIZE_BYTES];
-        buf[0] = control.bytes[0];
+        buf[0] = control.into();
         self.device
             .interface()
             .write_register(CHARGER_CONTROL_1_ADDR, LARGEST_REG_SIZE_BITS, &buf)
@@ -813,7 +370,7 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     /// Returns an error if the I²C transaction fails
     pub async fn write_charger_control_2(&mut self, control: ChargerControl2) -> Result<(), BQ25887Error<I2C::Error>> {
         let mut buf = [0u8; LARGEST_REG_SIZE_BYTES];
-        buf[0] = control.bytes[0];
+        buf[0] = control.into();
         self.device
             .interface()
             .write_register(CHARGER_CONTROL_2_ADDR, LARGEST_REG_SIZE_BITS, &buf)
@@ -848,7 +405,7 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     /// Returns an error if the I²C transaction fails
     pub async fn write_charger_control_3(&mut self, control: ChargerControl3) -> Result<(), BQ25887Error<I2C::Error>> {
         let mut buf = [0u8; LARGEST_REG_SIZE_BYTES];
-        buf[0] = control.bytes[0];
+        buf[0] = control.into();
         self.device
             .interface()
             .write_register(CHARGER_CONTROL_3_ADDR, LARGEST_REG_SIZE_BITS, &buf)
@@ -883,7 +440,7 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     /// Returns an error if the I²C transaction fails
     pub async fn write_charger_control_4(&mut self, control: ChargerControl4) -> Result<(), BQ25887Error<I2C::Error>> {
         let mut buf = [0u8; LARGEST_REG_SIZE_BYTES];
-        buf[0] = control.bytes[0];
+        buf[0] = control.into();
         self.device
             .interface()
             .write_register(CHARGER_CONTROL_4_ADDR, LARGEST_REG_SIZE_BITS, &buf)
@@ -1074,7 +631,7 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     /// Returns an error if the I²C transaction fails
     pub async fn write_charger_mask_1(&mut self, mask: ChargerMask1) -> Result<(), BQ25887Error<I2C::Error>> {
         let mut buf = [0u8; LARGEST_REG_SIZE_BYTES];
-        buf[0] = mask.bytes[0];
+        buf[0] = mask.into();
         self.device
             .interface()
             .write_register(CHARGER_MASK_1_ADDR, LARGEST_REG_SIZE_BITS, &buf)
@@ -1111,7 +668,7 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     /// Returns an error if the I²C transaction fails
     pub async fn write_charger_mask_2(&mut self, mask: ChargerMask2) -> Result<(), BQ25887Error<I2C::Error>> {
         let mut buf = [0u8; LARGEST_REG_SIZE_BYTES];
-        buf[0] = mask.bytes[0];
+        buf[0] = mask.into();
         self.device
             .interface()
             .write_register(CHARGER_MASK_2_ADDR, LARGEST_REG_SIZE_BITS, &buf)
@@ -1148,7 +705,7 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     /// Returns an error if the I²C transaction fails
     pub async fn write_fault_mask(&mut self, mask: FaultMask) -> Result<(), BQ25887Error<I2C::Error>> {
         let mut buf = [0u8; LARGEST_REG_SIZE_BYTES];
-        buf[0] = mask.bytes[0];
+        buf[0] = mask.into();
         self.device
             .interface()
             .write_register(FAULT_MASK_ADDR, LARGEST_REG_SIZE_BITS, &buf)
@@ -1183,7 +740,7 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     /// Returns an error if the I²C transaction fails
     pub async fn write_adc_control(&mut self, control: AdcControl) -> Result<(), BQ25887Error<I2C::Error>> {
         let mut buf = [0u8; LARGEST_REG_SIZE_BYTES];
-        buf[0] = control.bytes[0];
+        buf[0] = control.into();
         self.device
             .interface()
             .write_register(ADC_CONTROL_ADDR, LARGEST_REG_SIZE_BITS, &buf)
@@ -1229,7 +786,7 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
         function: AdcFunctionDisable,
     ) -> Result<(), BQ25887Error<I2C::Error>> {
         let mut buf = [0u8; LARGEST_REG_SIZE_BYTES];
-        buf[0] = function.bytes[0];
+        buf[0] = function.into();
         self.device
             .interface()
             .write_register(ADC_FUNCTION_DISABLE_ADDR, LARGEST_REG_SIZE_BITS, &buf)
@@ -1463,7 +1020,7 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
         info: PartInformation,
     ) -> Result<(), BQ25887Error<I2C::Error>> {
         let mut buf = [0u8; LARGEST_REG_SIZE_BYTES];
-        buf[0] = info.bytes[0];
+        buf[0] = info.into();
         self.device
             .interface()
             .write_register(PART_INFORMATION_ADDR, LARGEST_REG_SIZE_BITS, &buf)
@@ -1531,7 +1088,7 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
         control: CellBalancingControl1,
     ) -> Result<(), BQ25887Error<I2C::Error>> {
         let mut buf = [0u8; LARGEST_REG_SIZE_BYTES];
-        buf[0] = control.bytes[0];
+        buf[0] = control.into();
         self.device
             .interface()
             .write_register(CELL_BALANCING_CONTROL_1_ADDR, LARGEST_REG_SIZE_BITS, &buf)
@@ -1567,7 +1124,7 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
         control: CellBalancingControl2,
     ) -> Result<(), BQ25887Error<I2C::Error>> {
         let mut buf = [0u8; LARGEST_REG_SIZE_BYTES];
-        buf[0] = control.bytes[0];
+        buf[0] = control.into();
         self.device
             .interface()
             .write_register(CELL_BALANCING_CONTROL_2_ADDR, LARGEST_REG_SIZE_BITS, &buf)
@@ -1617,7 +1174,7 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
         control: CellBalancingStatusAndControl,
     ) -> Result<(), BQ25887Error<I2C::Error>> {
         let mut buf = [0u8; LARGEST_REG_SIZE_BYTES];
-        buf[0] = control.bytes[0];
+        buf[0] = control.into();
         self.device
             .interface()
             .write_register(CELL_BALANCING_STATUS_AND_CONTROL_ADDR, LARGEST_REG_SIZE_BITS, &buf)
@@ -1662,7 +1219,7 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     /// Returns an error if the I²C transaction fails
     pub async fn write_cell_balancing_flag(&mut self, flag: CellBalancingFlag) -> Result<(), BQ25887Error<I2C::Error>> {
         let mut buf = [0u8; LARGEST_REG_SIZE_BYTES];
-        buf[0] = flag.bytes[0];
+        buf[0] = flag.into();
         self.device
             .interface()
             .write_register(CELL_BALANCING_FLAG_ADDR, LARGEST_REG_SIZE_BITS, &buf)
@@ -1703,7 +1260,7 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     /// Returns an error if the I²C transaction fails
     pub async fn write_cell_balancing_mask(&mut self, mask: CellBalancingMask) -> Result<(), BQ25887Error<I2C::Error>> {
         let mut buf = [0u8; LARGEST_REG_SIZE_BYTES];
-        buf[0] = mask.bytes[0];
+        buf[0] = mask.into();
         self.device
             .interface()
             .write_register(CELL_BALANCING_MASK_ADDR, LARGEST_REG_SIZE_BITS, &buf)
