@@ -395,6 +395,35 @@ CHARGER_CTRL_2:
         Treg_80C: 0b01
         Treg_100C: 0b10
         Treg_120C: 0b11
+    EN_CHG:
+      start: 3
+      base: bool
+      description: |
+        Charger Enable Configuration
+        0 - Charge Disable
+        1 - Charge Enable (default)
+    CELLLOWV:
+      start: 2
+      base: bool
+      description: |
+        Battery precharge to fast-charge threshold:
+        0 - 2.8 V
+        1 - 3.0 V (default)
+    VCELL_RECHG:
+      start: 0
+      end: 2
+      base: uint
+      description: |
+        Cell Recharge Threshold Offset (below VCELLREG)
+        Offset: 50 mV
+        Range: 50 mV - 200 mV
+        Default: 100 mV
+      conversion:
+        name: VCELL_RECHG
+        VCELL_RECHG_50mv: 0b00
+        VCELL_RECHG_100mv: 0b01
+        VCELL_RECHG_150mv: 0b10
+        VCELL_RECHG_200mv: 0b11
 CHARGER_CTRL_3:
   type: register
   description: Charger Control 3 Register
@@ -852,6 +881,9 @@ FAULT_MASK:
     TMR_MASK:
       base: bool
       start: 4
+    SNS_SHORT_MASK:
+      base: bool
+      start: 3
 ADC_CONTROL:
   type: register
   description: ADC Control Register
