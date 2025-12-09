@@ -66,6 +66,27 @@ where
 
 The driver exposes high-level methods for each register group, e.g. `read_charge_current_limit`, `write_input_voltage_limit`, and friends. These helpers wrap the generated register accessors and convert conversion errors into the crate’s custom error type.
 
+## Embassy integration
+
+Enable the `embassy` feature to pull in the `bq25887::embassy` module. It provides thin wrappers around `embassy_embedded_hal::shared_bus::asynch::i2c` so you can build a driver from a shared `Mutex`-guarded bus via `new_driver`, or apply per-device bus settings with `new_driver_with_config`. These helpers make it straightforward to share one I²C peripheral across multiple Embassy tasks while keeping charger operations serialized.
+
+```/dev/null/examples/embassy.rs#L1-18
+use bq25887::embassy::{new_driver, SharedBus};
+use embassy_sync::blocking_mutex::raw::ThreadModeRawMutex;
+use embassy_sync::mutex::Mutex;
+
+// Replace `MyAsyncI2c` with your HAL's async I²C peripheral.
+static BUS: SharedBus<ThreadModeRawMutex, MyAsyncI2c> = Mutex::new(MyAsyncI2c::new());
+
+async fn poll_charger() -> Result<(), bq25887::BQ25887Error<MyAsyncI2c::Error>> {
+    let mut driver = new_driver(&BUS);
+
+    let status = driver.read_charger_status_1().await?;
+    // Inspect `status` or update application state.
+    Ok(())
+}
+```
+
 ---
 
 ## Feature flags
@@ -73,6 +94,7 @@ The driver exposes high-level methods for each register group, e.g. `read_charge
 | Feature    | Default | Description                                                               |
 |------------|---------|---------------------------------------------------------------------------|
 | `defmt-03` | ✗       | Enables `defmt` formatting support for logging-friendly targets           |
+| `embassy`  | ✗       | Enables Embassy shared-bus helpers via the `bq25887::embassy` module      |
 | `log`      | ✗       | Enables `log` crate integration for environments that use `log` backends |
 
 ---

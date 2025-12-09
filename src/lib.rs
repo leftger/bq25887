@@ -1,33 +1,72 @@
-//! This is a platform-agnostic Rust driver for the Texas Instruments BQ25887 Battery
-//! fuel/gas gauge based on the [`embedded-hal`] traits.
+//! # BQ25887 battery charger driver
 //!
-//! [`embedded-hal`]: https://docs.rs/embedded-hal
+//! `bq25887` is a platform-agnostic Rust driver for the Texas Instruments BQ25887
+//! synchronous battery charger. It targets `no_std` environments and provides an
+//! async-friendly I²C interface built on the [`embedded-hal-async`] traits.
 //!
-//! For further details of the device architecture and operation, please refer
-//! to the official [`Datasheet`].
+//! The optional `embassy` feature supplies helpers for constructing shared-bus
+//! drivers that integrate smoothly with the Embassy async ecosystem.
 //!
-//! [`Datasheet`]: https://www.ti.com/lit/ug/slusd89b/slusd89b.pdf
-
-#![doc = include_str!("../README.md")]
+//! ## Examples
+//!
+//! Create a driver with an async I²C peripheral and read the charger status:
+//!
+//! ```no_run
+//! use bq25887::Bq25887Driver;
+//!
+//! async fn inspect<I2C>(i2c: I2C) -> Result<(), bq25887::BQ25887Error<I2C::Error>>
+//! where
+//!     I2C: embedded_hal_async::i2c::I2c,
+//! {
+//!     let mut driver = Bq25887Driver::new(i2c);
+//!     let status = driver.read_charger_status_1().await?;
+//!     // Evaluate charger status or update application state here.
+//!     let _ = status;
+//!     Ok(())
+//! }
+//! ```
+//!
+//! For a deeper tour of the API and hardware integration tips, see the project
+//! README and the device datasheet.
+//!
+//! [`embedded-hal-async`]: https://docs.rs/embedded-hal-async
+//! [datasheet]: https://www.ti.com/lit/ug/slusd89b/slusd89b.pdf
+#![cfg_attr(docsrs, feature(doc_cfg, doc_auto_cfg))]
 #![cfg_attr(not(test), no_std)]
-#![allow(missing_docs)]
+#![warn(missing_docs, rustdoc::broken_intra_doc_links)]
+#![doc(html_root_url = "https://docs.rs/bq25887")]
 
-#[cfg(feature = "defmt-03")]
-use defmt::{Format, Formatter, write};
 use embedded_hal_async::i2c::I2c as I2cTrait;
 
 const BQ_ADDR: u8 = 0x6A;
 const LARGEST_REG_SIZE_BYTES: usize = 0x01;
 
-device_driver::create_device!(
-    device_name: Bq25887,
-    manifest: "src/bq25887.yaml"
-);
+#[allow(missing_docs)]
+mod generated {
+    device_driver::create_device!(
+        device_name: Bq25887,
+        manifest: "src/bq25887.yaml"
+    );
+}
 
+/// Type-safe register accessor for the BQ25887 device.
+pub use generated::Bq25887;
+/// Enumeration of fast charge current limit selections.
+pub use generated::Ichg;
+/// Generated register field definitions for the charger.
+pub use generated::field_sets;
+
+#[cfg(feature = "embassy")]
+#[cfg_attr(docsrs, doc(cfg(feature = "embassy")))]
+pub mod embassy;
+
+/// Error type produced by operations on the BQ25887 driver.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 #[cfg_attr(feature = "defmt-03", derive(defmt::Format))]
 pub enum BQ25887Error<I2cError> {
+    /// I²C transaction failure reported by the underlying bus implementation.
     I2c(I2cError),
+    /// Register value conversion failure triggered by invalid raw data.
     Conversion(device_driver::ConversionError<u8>),
 }
 
@@ -69,16 +108,19 @@ impl<I2C: I2cTrait> device_driver::AsyncRegisterInterface for DeviceInterface<I2
     }
 }
 
-/// BQ25887 interface, which takes an async I2C bus
+/// Adapter that bridges the generated register API to an async I²C peripheral.
 pub struct DeviceInterface<I2C: I2cTrait> {
+    /// Async I²C peripheral used to communicate with the charger.
     pub i2c: I2C,
 }
 
+/// High-level async driver for the BQ25887 charger.
 pub struct Bq25887Driver<I2C: I2cTrait> {
     device: Bq25887<DeviceInterface<I2C>>,
 }
 
 impl<I2C: I2cTrait> Bq25887Driver<I2C> {
+    /// Creates a new driver from the provided async I²C peripheral.
     pub fn new(i2c: I2C) -> Self {
         Bq25887Driver {
             device: Bq25887::new(DeviceInterface { i2c }),
