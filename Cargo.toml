@@ -1,33 +1,38 @@
 [package]
 name = "bq25887"
 version = "0.1.0"
-edition = "2024"
-authors = ["leftger@gmail.com"]
 description = "Device driver for the Texas Instruments BQ25887 linear battery chargers."
-readme = "README.md"
+edition = "2024"
+authors = ["Gerzain Mata <leftger@gmail.com>", "Tavish Srivastava <tavishsrivastava87@gmail.com>"]
 repository = "https://github.com/leftger/bq25887"
-
 license = "MIT OR Apache-2.0"
-keywords = ["embedded", "driver", "battery", "charger"]
-categories = ["embedded", "no-std"]
-exclude = ["Cargo.lock", ".gitignore"]
+include = [
+	"src/**/*.rs",
+	"build.rs",
+	"Cargo.toml",
+	"README.md",
+	"LICENSE*",
+	"src/bq25887.yaml",
+]
+readme = "README.md"
+keywords = ["battery", "charger", "embedded", "i2c", "power-management"]
+categories = ["embedded", "hardware-support", "no-std"]
 
 [dependencies]
-embedded-io-async = "0.6.1"
-embedded-hal = "1.0.0"
-embedded-hal-async = "1.0.0"
-embedded-batteries-async = "0.2.0"
 device-driver = { version = "1.0.3", default-features = false, features = [
-    "yaml",
+	"yaml",
 ] }
 defmt = { version = "1.0.1", optional = true }
-log = { version = "0.4.14", optional = true }
-bincode = { version = "2.0.0", default-features = false, features = ["derive"] }
-modular-bitfield = "0.12.0"
 
-[dev-dependencies]
-embedded-hal-mock = {version = "0.11.1", features = ["embedded-hal-async"] }
-tokio = {version = "1.42.0", features = ["rt", "macros", "time"] }
+embedded-hal-async = "1.0.0"
+
+log = { version = "0.4.22", optional = true }
+
+[build-dependencies]
+device-driver-generation = "1.0.7"
+prettyplease = "0.2.37"
+proc-macro2 = "1.0.103"
+syn = { version = "2.0.111", features = ["full"] }
 
 [lints.rust]
 unsafe_code = "deny"
@@ -42,8 +47,10 @@ pedantic = "deny"
 
 [features]
 default = []
+
 defmt-03 = [
-    "dep:defmt",
-    "device-driver/defmt-03",
+	"dep:defmt",
+	"device-driver/defmt-03",
 ]
+
 log = ["dep:log"]
