@@ -12,18 +12,12 @@
 #![cfg_attr(not(test), no_std)]
 #![allow(missing_docs)]
 
-mod registers;
-#[allow(clippy::wildcard_imports)]
-use crate::registers::*;
-
 #[cfg(feature = "defmt-03")]
 use defmt::{Format, Formatter, write};
-use device_driver::AsyncRegisterInterface;
 use embedded_hal_async::i2c::I2c as I2cTrait;
 
 const BQ_ADDR: u8 = 0x6A;
 const LARGEST_REG_SIZE_BYTES: usize = 0x01;
-const LARGEST_REG_SIZE_BITS: u32 = 0x08;
 
 device_driver::create_device!(
     device_name: Bq25887,
@@ -97,26 +91,25 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     /// BQ25887 p.33
     /// ### Errors
     /// Returns an error if the I²C transaction fails or the register value cannot be parsed
-    pub async fn read_voltage_regulation_limit(&mut self) -> Result<VoltageRegulationLimit, BQ25887Error<I2C::Error>> {
-        let cell_voltage_limit = self.device.cell_voltage_limit().read_async().await?;
-        let regulation_limit = VoltageRegulationLimit::new().with_vcellreg(cell_voltage_limit.vcellreg());
-        Ok(regulation_limit)
+    pub async fn read_voltage_regulation_limit(
+        &mut self,
+    ) -> Result<crate::field_sets::CellVoltageLimit, BQ25887Error<I2C::Error>> {
+        self.device.cell_voltage_limit().read_async().await
     }
 
     /// ### Breif
-    /// Writes the given `VoltageRegulationLimit` to the Cell Voltage Regulation Limit Register,
+    /// Writes the given `CellVoltageLimit` to the Cell Voltage Regulation Limit Register,
     /// (Address = 0x00) (reset = 0xA0),
     /// BQ25887 p.33
     /// ### Errors
     /// Returns an error if the I²C transaction fails
     pub async fn write_voltage_regulation_limit(
         &mut self,
-        volt_limit: VoltageRegulationLimit,
+        volt_limit: crate::field_sets::CellVoltageLimit,
     ) -> Result<(), BQ25887Error<I2C::Error>> {
-        let raw_register_value: u8 = volt_limit.vcellreg();
         self.device
             .cell_voltage_limit()
-            .write_async(|reg| reg.set_vcellreg(raw_register_value))
+            .write_async(|reg| *reg = volt_limit)
             .await
     }
 
@@ -126,17 +119,10 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     /// BQ25887 p.34
     /// ### Errors
     /// Returns an error if the I²C transaction fails or the register value cannot be parsed
-    pub async fn read_charge_current_limit(&mut self) -> Result<ChargeCurrentLimit, BQ25887Error<I2C::Error>> {
-        let reg = self.device.charge_current_limit().read_async().await?;
-
-        let en_hiz = u8::from(reg.en_hiz());
-        let en_ilim = u8::from(reg.en_ilim());
-        let ichg = u8::from(reg.ichg()?);
-
-        Ok(ChargeCurrentLimit::new()
-            .with_en_hiz(en_hiz)
-            .with_en_ilim(en_ilim)
-            .with_ichg(ichg))
+    pub async fn read_charge_current_limit(
+        &mut self,
+    ) -> Result<crate::field_sets::ChargeCurrentLimit, BQ25887Error<I2C::Error>> {
+        self.device.charge_current_limit().read_async().await
     }
 
     /// ### Breif
@@ -147,15 +133,12 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     /// Returns an error if the I²C transaction fails
     pub async fn write_charge_current_limit(
         &mut self,
-        current_limit: ChargeCurrentLimit,
+        current_limit: crate::field_sets::ChargeCurrentLimit,
     ) -> Result<(), BQ25887Error<I2C::Error>> {
-        let mut buf = [0u8; LARGEST_REG_SIZE_BYTES];
-        buf[0] = current_limit.into();
         self.device
-            .interface()
-            .write_register(RegisterAddr::ChargeCurrentLimit.value(), LARGEST_REG_SIZE_BITS, &buf)
-            .await?;
-        Ok(())
+            .charge_current_limit()
+            .write_async(|reg| *reg = current_limit)
+            .await
     }
 
     /// ### Breif
@@ -164,19 +147,10 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     /// BQ25887 p.35
     /// ### Errors
     /// Returns an error if the I²C transaction fails or the register value cannot be parsed
-    pub async fn read_input_voltage_limit(&mut self) -> Result<InputVoltageLimit, BQ25887Error<I2C::Error>> {
-        let reg = self.device.input_voltage_limit().read_async().await?;
-
-        let en_vindpm_rst = u8::from(reg.en_vindpm_rst());
-        let en_bat_dischg = u8::from(reg.en_bat_dischg());
-        let pfm_ooa_dis = u8::from(reg.pfm_ooa_dis());
-        let vindpm = u8::from(reg.vindpm()?);
-
-        Ok(InputVoltageLimit::new()
-            .with_en_vindpm_rst(en_vindpm_rst)
-            .with_en_bat_dischg(en_bat_dischg)
-            .with_pfm_ooa_dis(pfm_ooa_dis)
-            .with_vindpm(vindpm))
+    pub async fn read_input_voltage_limit(
+        &mut self,
+    ) -> Result<crate::field_sets::InputVoltageLimit, BQ25887Error<I2C::Error>> {
+        self.device.input_voltage_limit().read_async().await
     }
 
     /// ### Breif
@@ -187,15 +161,12 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     /// Returns an error if the I²C transaction fails
     pub async fn write_input_voltage_limit(
         &mut self,
-        input_volt_limit: InputVoltageLimit,
+        input_volt_limit: crate::field_sets::InputVoltageLimit,
     ) -> Result<(), BQ25887Error<I2C::Error>> {
-        let mut buf = [0u8; LARGEST_REG_SIZE_BYTES];
-        buf[0] = input_volt_limit.into();
         self.device
-            .interface()
-            .write_register(RegisterAddr::InputVoltageLimit.value(), LARGEST_REG_SIZE_BITS, &buf)
-            .await?;
-        Ok(())
+            .input_voltage_limit()
+            .write_async(|reg| *reg = input_volt_limit)
+            .await
     }
 
     /// ### Breif
@@ -204,19 +175,10 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     /// BQ255887 p.36
     /// ### Errors
     /// Returns an error if the I²C transaction fails or the register value cannot be parsed
-    pub async fn read_input_current_limit(&mut self) -> Result<InputCurrentLimit, BQ25887Error<I2C::Error>> {
-        let reg = self.device.input_current_limit().read_async().await?;
-
-        let force_ico = u8::from(reg.force_ico());
-        let force_indet = u8::from(reg.force_indet());
-        let en_ico = u8::from(reg.en_ico());
-        let iindpm = u8::from(reg.iindpm()?);
-
-        Ok(InputCurrentLimit::new()
-            .with_force_ico(force_ico)
-            .with_force_indet(force_indet)
-            .with_en_ico(en_ico)
-            .with_iindpm(iindpm))
+    pub async fn read_input_current_limit(
+        &mut self,
+    ) -> Result<crate::field_sets::InputCurrentLimit, BQ25887Error<I2C::Error>> {
+        self.device.input_current_limit().read_async().await
     }
 
     /// ### Breif
@@ -227,15 +189,12 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     /// Returns an error if the I²C transaction fails
     pub async fn write_input_current_limit(
         &mut self,
-        current_limit: InputCurrentLimit,
+        current_limit: crate::field_sets::InputCurrentLimit,
     ) -> Result<(), BQ25887Error<I2C::Error>> {
-        let mut buf = [0u8; LARGEST_REG_SIZE_BYTES];
-        buf[0] = current_limit.into();
         self.device
-            .interface()
-            .write_register(RegisterAddr::InputCurrentLimit.value(), LARGEST_REG_SIZE_BITS, &buf)
-            .await?;
-        Ok(())
+            .input_current_limit()
+            .write_async(|reg| *reg = current_limit)
+            .await
     }
 
     /// ### Breif
@@ -246,15 +205,8 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     /// Returns an error if the I²C transaction fails or the register value cannot be parsed
     pub async fn read_precharge_and_termination_current_limit(
         &mut self,
-    ) -> Result<PrechargeAndTerminationCurrentLimit, BQ25887Error<I2C::Error>> {
-        let reg = self.device.prechg_termination_ctrl().read_async().await?;
-
-        let iprechg = u8::from(reg.iprechg()?);
-        let iterm = u8::from(reg.iprechg()?);
-
-        Ok(PrechargeAndTerminationCurrentLimit::new()
-            .with_iprechg(iprechg)
-            .with_iterm(iterm))
+    ) -> Result<crate::field_sets::PrechgTerminationCtrl, BQ25887Error<I2C::Error>> {
+        self.device.prechg_termination_ctrl().read_async().await
     }
 
     /// ### Breif
@@ -265,19 +217,12 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     /// Returns an error if the I²C transaction fails
     pub async fn write_precharge_and_termination_current_limit(
         &mut self,
-        current_limit: PrechargeAndTerminationCurrentLimit,
+        current_limit: crate::field_sets::PrechgTerminationCtrl,
     ) -> Result<(), BQ25887Error<I2C::Error>> {
-        let mut buf = [0u8; LARGEST_REG_SIZE_BYTES];
-        buf[0] = current_limit.into();
         self.device
-            .interface()
-            .write_register(
-                RegisterAddr::PrechargeAndTerminationCurrentLimit.value(),
-                LARGEST_REG_SIZE_BITS,
-                &buf,
-            )
-            .await?;
-        Ok(())
+            .prechg_termination_ctrl()
+            .write_async(|reg| *reg = current_limit)
+            .await
     }
 
     /// ### Breif
@@ -286,23 +231,10 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     /// BQ255887 p.38
     /// ### Errors
     /// Returns an error if the I²C transaction fails
-    pub async fn read_charger_control_1(&mut self) -> Result<ChargerControl1, BQ25887Error<I2C::Error>> {
-        let reg = self.device.charger_ctrl_1().read_async().await?;
-
-        let en_term = u8::from(reg.en_term());
-        let stat_dis = u8::from(reg.stat_dis());
-        let watchdog = u8::from(reg.watchdog());
-        let en_timer = u8::from(reg.en_timer());
-        let chg_timer = u8::from(reg.chg_timer());
-        let tmr2x_en = u8::from(reg.tmr_2_x_en());
-
-        Ok(ChargerControl1::new()
-            .with_en_term(en_term)
-            .with_stat_dis(stat_dis)
-            .with_watchdog(watchdog)
-            .with_en_timer(en_timer)
-            .with_chg_timer(chg_timer)
-            .with_tmr2x_en(tmr2x_en))
+    pub async fn read_charger_control_1(
+        &mut self,
+    ) -> Result<crate::field_sets::ChargerCtrl1, BQ25887Error<I2C::Error>> {
+        self.device.charger_ctrl_1().read_async().await
     }
 
     /// ### Breif
@@ -311,14 +243,11 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     /// BQ255887 p.38
     /// ### Errors
     /// Returns an error if the I²C transaction fails
-    pub async fn write_charger_control_1(&mut self, control: ChargerControl1) -> Result<(), BQ25887Error<I2C::Error>> {
-        let mut buf = [0u8; LARGEST_REG_SIZE_BYTES];
-        buf[0] = control.into();
-        self.device
-            .interface()
-            .write_register(RegisterAddr::ChargerControl1.value(), LARGEST_REG_SIZE_BITS, &buf)
-            .await?;
-        Ok(())
+    pub async fn write_charger_control_1(
+        &mut self,
+        control: crate::field_sets::ChargerCtrl1,
+    ) -> Result<(), BQ25887Error<I2C::Error>> {
+        self.device.charger_ctrl_1().write_async(|reg| *reg = control).await
     }
 
     /// ### Breif
@@ -327,21 +256,10 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     /// BQ255887 p.39
     /// ### Errors
     /// Returns an error if the I²C transaction fails
-    pub async fn read_charger_control_2(&mut self) -> Result<ChargerControl2, BQ25887Error<I2C::Error>> {
-        let reg = self.device.charger_ctrl_2().read_async().await?;
-
-        let auto_indet_en = u8::from(reg.auto_indet_en());
-        let treg = u8::from(reg.treg());
-        let en_chg = u8::from(reg.en_chg());
-        let celllowv = u8::from(reg.celllowv());
-        let vrechg = u8::from(reg.vcell_rechg());
-
-        Ok(ChargerControl2::new()
-            .with_auto_indet_en(auto_indet_en)
-            .with_treg(treg)
-            .with_en_chg(en_chg)
-            .with_celllowv(celllowv)
-            .with_vrechg(vrechg))
+    pub async fn read_charger_control_2(
+        &mut self,
+    ) -> Result<crate::field_sets::ChargerCtrl2, BQ25887Error<I2C::Error>> {
+        self.device.charger_ctrl_2().read_async().await
     }
 
     /// ### Breif
@@ -350,14 +268,11 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     /// BQ255887 p.39
     /// ### Errors
     /// Returns an error if the I²C transaction fails
-    pub async fn write_charger_control_2(&mut self, control: ChargerControl2) -> Result<(), BQ25887Error<I2C::Error>> {
-        let mut buf = [0u8; LARGEST_REG_SIZE_BYTES];
-        buf[0] = control.into();
-        self.device
-            .interface()
-            .write_register(RegisterAddr::ChargerControl2.value(), LARGEST_REG_SIZE_BITS, &buf)
-            .await?;
-        Ok(())
+    pub async fn write_charger_control_2(
+        &mut self,
+        control: crate::field_sets::ChargerCtrl2,
+    ) -> Result<(), BQ25887Error<I2C::Error>> {
+        self.device.charger_ctrl_2().write_async(|reg| *reg = control).await
     }
 
     /// ### Breif
@@ -366,17 +281,10 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     /// BQ255887 p.40
     /// ### Errors
     /// Returns an error if the I²C transaction fails
-    pub async fn read_charger_control_3(&mut self) -> Result<ChargerControl3, BQ25887Error<I2C::Error>> {
-        let reg = self.device.charger_ctrl_3().read_async().await?;
-
-        let pfm_dis = u8::from(reg.pfm_dis());
-        let wd_rst = u8::from(reg.wd_rst());
-        let topoff_timer = u8::from(reg.topoff_timer());
-
-        Ok(ChargerControl3::new()
-            .with_pfm_dis(pfm_dis)
-            .with_wd_rst(wd_rst)
-            .with_topoff_timer(topoff_timer))
+    pub async fn read_charger_control_3(
+        &mut self,
+    ) -> Result<crate::field_sets::ChargerCtrl3, BQ25887Error<I2C::Error>> {
+        self.device.charger_ctrl_3().read_async().await
     }
 
     /// ### Breif
@@ -385,14 +293,11 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     /// BQ255887 p.40
     /// ### Errors
     /// Returns an error if the I²C transaction fails
-    pub async fn write_charger_control_3(&mut self, control: ChargerControl3) -> Result<(), BQ25887Error<I2C::Error>> {
-        let mut buf = [0u8; LARGEST_REG_SIZE_BYTES];
-        buf[0] = control.into();
-        self.device
-            .interface()
-            .write_register(RegisterAddr::ChargerControl3.value(), LARGEST_REG_SIZE_BITS, &buf)
-            .await?;
-        Ok(())
+    pub async fn write_charger_control_3(
+        &mut self,
+        control: crate::field_sets::ChargerCtrl3,
+    ) -> Result<(), BQ25887Error<I2C::Error>> {
+        self.device.charger_ctrl_3().write_async(|reg| *reg = control).await
     }
 
     /// ### Breif
@@ -401,17 +306,10 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     /// BQ255887 p.41
     /// ### Errors
     /// Returns an error if the I²C transaction fails
-    pub async fn read_charger_control_4(&mut self) -> Result<ChargerControl4, BQ25887Error<I2C::Error>> {
-        let reg = self.device.charger_ctrl_4().read_async().await?;
-
-        let vset = u8::from(reg.jeita_vset());
-        let iseth = u8::from(reg.jeita_iseth());
-        let isetcurr = u8::from(reg.jeita_isetc());
-
-        Ok(ChargerControl4::new()
-            .with_jeita_vset(vset)
-            .with_jeita_iseth(iseth)
-            .with_jeita_isetc(isetcurr))
+    pub async fn read_charger_control_4(
+        &mut self,
+    ) -> Result<crate::field_sets::ChargerCtrl4, BQ25887Error<I2C::Error>> {
+        self.device.charger_ctrl_4().read_async().await
     }
 
     /// ### Breif
@@ -420,14 +318,11 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     /// BQ255887 p.41
     /// ### Errors
     /// Returns an error if the I²C transaction fails
-    pub async fn write_charger_control_4(&mut self, control: ChargerControl4) -> Result<(), BQ25887Error<I2C::Error>> {
-        let mut buf = [0u8; LARGEST_REG_SIZE_BYTES];
-        buf[0] = control.into();
-        self.device
-            .interface()
-            .write_register(RegisterAddr::ChargerControl4.value(), LARGEST_REG_SIZE_BITS, &buf)
-            .await?;
-        Ok(())
+    pub async fn write_charger_control_4(
+        &mut self,
+        control: crate::field_sets::ChargerCtrl4,
+    ) -> Result<(), BQ25887Error<I2C::Error>> {
+        self.device.charger_ctrl_4().write_async(|reg| *reg = control).await
     }
 
     /// ### Breif
@@ -436,10 +331,10 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     /// BQ255887 p.43
     /// ### Errors
     /// Returns an error if the I²C transaction fails
-    pub async fn read_ico_current_limit_in_use(&mut self) -> Result<IcoCurrentLimitInUse, BQ25887Error<I2C::Error>> {
-        let reg = self.device.ico_current_limit().read_async().await?;
-
-        Ok(IcoCurrentLimitInUse::new().with_ico_ilim(reg.ico_ilim()))
+    pub async fn read_ico_current_limit_in_use(
+        &mut self,
+    ) -> Result<crate::field_sets::IcoCurrentLimit, BQ25887Error<I2C::Error>> {
+        self.device.ico_current_limit().read_async().await
     }
 
     /// ### Breif
@@ -448,21 +343,10 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     /// BQ255887 p.44
     /// ### Errors
     /// Returns an error if the I²C transaction fails
-    pub async fn read_charger_status_1(&mut self) -> Result<ChargerStatus1, BQ25887Error<I2C::Error>> {
-        let reg = self.device.charger_status_1().read_async().await?;
-
-        let iindpm_stat = u8::from(reg.iindpm_stat());
-        let vindpm_stat = u8::from(reg.vindpm_stat());
-        let treg_stat = u8::from(reg.treg_stat());
-        let wd_stat = u8::from(reg.wd_stat());
-        let chrg_stat = u8::from(reg.chrg_stat());
-
-        Ok(ChargerStatus1::new()
-            .with_iindpm_stat(iindpm_stat)
-            .with_vindpm_stat(vindpm_stat)
-            .with_treg_stat(treg_stat)
-            .with_wd_stat(wd_stat)
-            .with_chrg_stat(chrg_stat))
+    pub async fn read_charger_status_1(
+        &mut self,
+    ) -> Result<crate::field_sets::ChargerStatus1, BQ25887Error<I2C::Error>> {
+        self.device.charger_status_1().read_async().await
     }
 
     /// ### Breif
@@ -471,17 +355,10 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     /// BQ255887 p.45
     /// ### Errors
     /// Returns an error if the I²C transaction fails
-    pub async fn read_charger_status_2(&mut self) -> Result<ChargerStatus2, BQ25887Error<I2C::Error>> {
-        let reg = self.device.charger_status_2().read_async().await?;
-
-        let pg_stat = u8::from(reg.pg_stat());
-        let vbus_stat = u8::from(reg.vbus_stat());
-        let ico_stat = u8::from(reg.ico_stat());
-
-        Ok(ChargerStatus2::new()
-            .with_pg_stat(pg_stat)
-            .with_vbus_stat(vbus_stat)
-            .with_ico_stat(ico_stat))
+    pub async fn read_charger_status_2(
+        &mut self,
+    ) -> Result<crate::field_sets::ChargerStatus2, BQ25887Error<I2C::Error>> {
+        self.device.charger_status_2().read_async().await
     }
 
     /// ### Breif
@@ -490,12 +367,8 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     /// BQ255887 p.46
     /// ### Errors
     /// Returns an error if the I²C transaction fails
-    pub async fn read_ntc_status(&mut self) -> Result<NTCStatus, BQ25887Error<I2C::Error>> {
-        let reg = self.device.ntc_status().read_async().await?;
-
-        let ts_stat = u8::from(reg.ts_stat()?);
-
-        Ok(NTCStatus::new().with_ts_stat(ts_stat))
+    pub async fn read_ntc_status(&mut self) -> Result<crate::field_sets::NtcStatus, BQ25887Error<I2C::Error>> {
+        self.device.ntc_status().read_async().await
     }
 
     /// ### Breif
@@ -504,17 +377,8 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     /// BQ255887 p.47
     /// ### Errors
     /// Returns an error if the I²C transaction fails
-    pub async fn read_fault_status(&mut self) -> Result<FaultStatus, BQ25887Error<I2C::Error>> {
-        let reg = self.device.fault_status().read_async().await?;
-
-        let vbus_ovp_stat = u8::from(reg.vbus_ovp_stat());
-        let tshut_stat = u8::from(reg.tshut_stat());
-        let tmr_stat = u8::from(reg.tmr_stat());
-
-        Ok(FaultStatus::new()
-            .with_vbus_ovp_stat(vbus_ovp_stat)
-            .with_tshut_stat(tshut_stat)
-            .with_tmr_stat(tmr_stat))
+    pub async fn read_fault_status(&mut self) -> Result<crate::field_sets::FaultStatus, BQ25887Error<I2C::Error>> {
+        self.device.fault_status().read_async().await
     }
 
     /// ### Breif
@@ -523,21 +387,8 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     /// BQ255887 p.48
     /// ### Errors
     /// Returns an error if the I²C transaction fails
-    pub async fn read_charger_flag_1(&mut self) -> Result<ChargerFlag1, BQ25887Error<I2C::Error>> {
-        let reg = self.device.charger_flag_1().read_async().await?;
-
-        let iindpm = u8::from(reg.iindpm_flag());
-        let vindpm = u8::from(reg.vindpm_flag());
-        let treg = u8::from(reg.treg_flag());
-        let wd = u8::from(reg.wd_flag());
-        let chrg = u8::from(reg.chrg_flag());
-
-        Ok(ChargerFlag1::new()
-            .with_iindpm_flag(iindpm)
-            .with_vindpm_flag(vindpm)
-            .with_treg_flag(treg)
-            .with_wd_flag(wd)
-            .with_chrg_flag(chrg))
+    pub async fn read_charger_flag_1(&mut self) -> Result<crate::field_sets::ChargerFlag1, BQ25887Error<I2C::Error>> {
+        self.device.charger_flag_1().read_async().await
     }
 
     /// ### Breif
@@ -546,19 +397,8 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     /// BQ255887 p.49
     /// ### Errors
     /// Returns an error if the I²C transaction fails
-    pub async fn read_charger_flag_2(&mut self) -> Result<ChargerFlag2, BQ25887Error<I2C::Error>> {
-        let reg = self.device.charger_flag_2().read_async().await?;
-
-        let pg = u8::from(reg.pg_flag());
-        let vbus = u8::from(reg.vbus_flag());
-        let ts = u8::from(reg.ts_flag());
-        let ico = u8::from(reg.ico_flag());
-
-        Ok(ChargerFlag2::new()
-            .with_pg_flag(pg)
-            .with_vbus_flag(vbus)
-            .with_ts_flag(ts)
-            .with_ico_flag(ico))
+    pub async fn read_charger_flag_2(&mut self) -> Result<crate::field_sets::ChargerFlag2, BQ25887Error<I2C::Error>> {
+        self.device.charger_flag_2().read_async().await
     }
 
     /// ### Breif
@@ -567,17 +407,8 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     /// BQ255887 p.50
     /// ### Errors
     /// Returns an error if the I²C transaction fails
-    pub async fn read_fault_flag(&mut self) -> Result<FaultFlag, BQ25887Error<I2C::Error>> {
-        let reg = self.device.fault_flag().read_async().await?;
-
-        let vbus_ovp = u8::from(reg.vbus_ovp_flag());
-        let tshut = u8::from(reg.tshut_flag());
-        let tmr = u8::from(reg.tmr_flag());
-
-        Ok(FaultFlag::new()
-            .with_vbus_ovp_flag(vbus_ovp)
-            .with_tshut_flag(tshut)
-            .with_tmr_flag(tmr))
+    pub async fn read_fault_flag(&mut self) -> Result<crate::field_sets::FaultFlag, BQ25887Error<I2C::Error>> {
+        self.device.fault_flag().read_async().await
     }
 
     /// ### Breif
@@ -586,23 +417,8 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     /// BQ255887 p.51
     /// ### Errors
     /// Returns an error if the I²C transaction fails
-    pub async fn read_charger_mask_1(&mut self) -> Result<ChargerMask1, BQ25887Error<I2C::Error>> {
-        let reg = self.device.charger_mask_1().read_async().await?;
-
-        let adc_done = u8::from(reg.adc_done_mask());
-        let iindpm = u8::from(reg.iindpm_mask());
-        let vindpm = u8::from(reg.vindpm_mask());
-        let treg = u8::from(reg.treg_mask());
-        let wd = u8::from(reg.wd_mask());
-        let chrg = u8::from(reg.chrg_mask());
-
-        Ok(ChargerMask1::new()
-            .with_adc_done_mask(adc_done)
-            .with_iindpm_mask(iindpm)
-            .with_vinpdm_mask(vindpm)
-            .with_treg_mask(treg)
-            .with_wd_mask(wd)
-            .with_chrg_mask(chrg))
+    pub async fn read_charger_mask_1(&mut self) -> Result<crate::field_sets::ChargerMask1, BQ25887Error<I2C::Error>> {
+        self.device.charger_mask_1().read_async().await
     }
 
     /// ### Breif
@@ -611,14 +427,11 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     /// BQ255887 p.51
     /// ### Errors
     /// Returns an error if the I²C transaction fails
-    pub async fn write_charger_mask_1(&mut self, mask: ChargerMask1) -> Result<(), BQ25887Error<I2C::Error>> {
-        let mut buf = [0u8; LARGEST_REG_SIZE_BYTES];
-        buf[0] = mask.into();
-        self.device
-            .interface()
-            .write_register(RegisterAddr::ChargerMask1.value(), LARGEST_REG_SIZE_BITS, &buf)
-            .await?;
-        Ok(())
+    pub async fn write_charger_mask_1(
+        &mut self,
+        mask: crate::field_sets::ChargerMask1,
+    ) -> Result<(), BQ25887Error<I2C::Error>> {
+        self.device.charger_mask_1().write_async(|reg| *reg = mask).await
     }
 
     /// ### Breif
@@ -627,19 +440,8 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     /// BQ255887 p.52
     /// ### Errors
     /// Returns an error if the I²C transaction fails
-    pub async fn read_charger_mask_2(&mut self) -> Result<ChargerMask2, BQ25887Error<I2C::Error>> {
-        let reg = self.device.charger_mask_2().read_async().await?;
-
-        let pg = u8::from(reg.pg_mask());
-        let vbus = u8::from(reg.vbus_mask());
-        let ts = u8::from(reg.ts_mask());
-        let ico = u8::from(reg.ico_mask());
-
-        Ok(ChargerMask2::new()
-            .with_pg_mask(pg)
-            .with_vbus_mask(vbus)
-            .with_ts_mask(ts)
-            .with_ico_mask(ico))
+    pub async fn read_charger_mask_2(&mut self) -> Result<crate::field_sets::ChargerMask2, BQ25887Error<I2C::Error>> {
+        self.device.charger_mask_2().read_async().await
     }
 
     /// ### Breif
@@ -648,14 +450,11 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     /// BQ255887 p.52
     /// ### Errors
     /// Returns an error if the I²C transaction fails
-    pub async fn write_charger_mask_2(&mut self, mask: ChargerMask2) -> Result<(), BQ25887Error<I2C::Error>> {
-        let mut buf = [0u8; LARGEST_REG_SIZE_BYTES];
-        buf[0] = mask.into();
-        self.device
-            .interface()
-            .write_register(RegisterAddr::ChargerMask2.value(), LARGEST_REG_SIZE_BITS, &buf)
-            .await?;
-        Ok(())
+    pub async fn write_charger_mask_2(
+        &mut self,
+        mask: crate::field_sets::ChargerMask2,
+    ) -> Result<(), BQ25887Error<I2C::Error>> {
+        self.device.charger_mask_2().write_async(|reg| *reg = mask).await
     }
 
     /// ### Breif
@@ -664,19 +463,8 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     /// BQ255887 p.53
     /// ### Errors
     /// Returns an error if the I²C transaction fails
-    pub async fn read_fault_mask(&mut self) -> Result<FaultMask, BQ25887Error<I2C::Error>> {
-        let reg = self.device.fault_mask().read_async().await?;
-
-        let vbus = u8::from(reg.vbus_ovp_mask());
-        let tshut = u8::from(reg.tshut_mask());
-        let tmr = u8::from(reg.tmr_mask());
-        let sns_short = u8::from(reg.sns_short_mask());
-
-        Ok(FaultMask::new()
-            .with_vbus_ovp_mask(vbus)
-            .with_tshut_mask(tshut)
-            .with_tmr_mask(tmr)
-            .with_sns_short_mask(sns_short))
+    pub async fn read_fault_mask(&mut self) -> Result<crate::field_sets::FaultMask, BQ25887Error<I2C::Error>> {
+        self.device.fault_mask().read_async().await
     }
 
     /// ### Breif
@@ -685,14 +473,11 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     /// BQ255887 p.53
     /// ### Errors
     /// Returns an error if the I²C transaction fails
-    pub async fn write_fault_mask(&mut self, mask: FaultMask) -> Result<(), BQ25887Error<I2C::Error>> {
-        let mut buf = [0u8; LARGEST_REG_SIZE_BYTES];
-        buf[0] = mask.into();
-        self.device
-            .interface()
-            .write_register(RegisterAddr::FaultMask.value(), LARGEST_REG_SIZE_BITS, &buf)
-            .await?;
-        Ok(())
+    pub async fn write_fault_mask(
+        &mut self,
+        mask: crate::field_sets::FaultMask,
+    ) -> Result<(), BQ25887Error<I2C::Error>> {
+        self.device.fault_mask().write_async(|reg| *reg = mask).await
     }
 
     /// ### Breif
@@ -701,17 +486,8 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     /// BQ255887 p.54
     /// ### Errors
     /// Returns an error if the I²C transaction fails
-    pub async fn read_adc_control(&mut self) -> Result<AdcControl, BQ25887Error<I2C::Error>> {
-        let reg = self.device.adc_control().read_async().await?;
-
-        let adc_en = u8::from(reg.adc_en());
-        let adc_rate = u8::from(reg.adc_rate());
-        let adc_sample = u8::from(reg.adc_sample());
-
-        Ok(AdcControl::new()
-            .with_adc_en(adc_en)
-            .with_adc_rate(adc_rate)
-            .with_adc_sample(adc_sample))
+    pub async fn read_adc_control(&mut self) -> Result<crate::field_sets::AdcControl, BQ25887Error<I2C::Error>> {
+        self.device.adc_control().read_async().await
     }
 
     /// ### Breif
@@ -720,14 +496,11 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     /// BQ255887 p.54
     /// ### Errors
     /// Returns an error if the I²C transaction fails
-    pub async fn write_adc_control(&mut self, control: AdcControl) -> Result<(), BQ25887Error<I2C::Error>> {
-        let mut buf = [0u8; LARGEST_REG_SIZE_BYTES];
-        buf[0] = control.into();
-        self.device
-            .interface()
-            .write_register(RegisterAddr::AdcControl.value(), LARGEST_REG_SIZE_BITS, &buf)
-            .await?;
-        Ok(())
+    pub async fn write_adc_control(
+        &mut self,
+        control: crate::field_sets::AdcControl,
+    ) -> Result<(), BQ25887Error<I2C::Error>> {
+        self.device.adc_control().write_async(|reg| *reg = control).await
     }
 
     /// ### Breif
@@ -736,25 +509,10 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     /// BQ255887 p.55
     /// ### Errors
     /// Returns an error if the I²C transaction fails
-    pub async fn read_adc_function_disable(&mut self) -> Result<AdcFunctionDisable, BQ25887Error<I2C::Error>> {
-        let reg = self.device.adc_function_disable().read_async().await?;
-
-        let ibus_adc_dis = u8::from(reg.ibus_adc_dis());
-        let ichg_adc_dis = u8::from(reg.ichg_adc_dis());
-        let vbus_adc_dis = u8::from(reg.vbus_adc_dis());
-        let vbat_adc_dis = u8::from(reg.vbat_adc_dis());
-        let ts_adc_dis = u8::from(reg.ts_adc_dis());
-        let vcell_adc_dis = u8::from(reg.vcell_adc_dis());
-        let tdie_adc_dis = u8::from(reg.tdie_adc_dis());
-
-        Ok(AdcFunctionDisable::new()
-            .with_ibus_adc_dis(ibus_adc_dis)
-            .with_ichg_adc_dis(ichg_adc_dis)
-            .with_vbus_adc_dis(vbus_adc_dis)
-            .with_vbat_adc_dis(vbat_adc_dis)
-            .with_ts_adc_dis(ts_adc_dis)
-            .with_vcell_adc_dis(vcell_adc_dis)
-            .with_tdie_adc_dis(tdie_adc_dis))
+    pub async fn read_adc_function_disable(
+        &mut self,
+    ) -> Result<crate::field_sets::AdcFunctionDisable, BQ25887Error<I2C::Error>> {
+        self.device.adc_function_disable().read_async().await
     }
 
     /// ### Breif
@@ -765,15 +523,12 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     /// Returns an error if the I²C transaction fails
     pub async fn write_adc_function_disable(
         &mut self,
-        function: AdcFunctionDisable,
+        function: crate::field_sets::AdcFunctionDisable,
     ) -> Result<(), BQ25887Error<I2C::Error>> {
-        let mut buf = [0u8; LARGEST_REG_SIZE_BYTES];
-        buf[0] = function.into();
         self.device
-            .interface()
-            .write_register(RegisterAddr::AdcFunctionDisable.value(), LARGEST_REG_SIZE_BITS, &buf)
-            .await?;
-        Ok(())
+            .adc_function_disable()
+            .write_async(|reg| *reg = function)
+            .await
     }
 
     /// ### Breif
@@ -782,12 +537,8 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     /// BQ255887 p.56
     /// ### Errors
     /// Returns an error if the I²C transaction fails
-    pub async fn read_ibus_adc_1(&mut self) -> Result<IbusAdc1, BQ25887Error<I2C::Error>> {
-        let reg = self.device.ibus_adc_1().read_async().await?;
-
-        let ibus_adc = reg.ibus_adc_msb();
-
-        Ok(IbusAdc1::new().with_ibus_adc_msb(ibus_adc))
+    pub async fn read_ibus_adc_1(&mut self) -> Result<crate::field_sets::IbusAdc1, BQ25887Error<I2C::Error>> {
+        self.device.ibus_adc_1().read_async().await
     }
 
     /// ### Breif
@@ -796,12 +547,8 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     /// BQ255887 p.56
     /// ### Errors
     /// Returns an error if the I²C transaction fails
-    pub async fn read_ibus_adc_0(&mut self) -> Result<IbusAdc0, BQ25887Error<I2C::Error>> {
-        let reg = self.device.ibus_adc_0().read_async().await?;
-
-        let ibus_adc = reg.ibus_adc_lsb();
-
-        Ok(IbusAdc0::new().with_ibus_adc_lsb(ibus_adc))
+    pub async fn read_ibus_adc_0(&mut self) -> Result<crate::field_sets::IbusAdc0, BQ25887Error<I2C::Error>> {
+        self.device.ibus_adc_0().read_async().await
     }
 
     /// ### Breif
@@ -810,12 +557,8 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     /// BQ255887 p.57
     /// ### Errors
     /// Returns an error if the I²C transaction fails
-    pub async fn read_ichg_adc_1(&mut self) -> Result<IChgAdc1, BQ25887Error<I2C::Error>> {
-        let reg = self.device.ichg_adc_1().read_async().await?;
-
-        let ichg_adc = reg.ichg_adc_msb();
-
-        Ok(IChgAdc1::new().with_ichg_adc_msb(ichg_adc))
+    pub async fn read_ichg_adc_1(&mut self) -> Result<crate::field_sets::IchgAdc1, BQ25887Error<I2C::Error>> {
+        self.device.ichg_adc_1().read_async().await
     }
 
     /// ### Breif
@@ -824,12 +567,8 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     /// BQ255887 p.57
     /// ### Errors
     /// Returns an error if the I²C transaction fails
-    pub async fn read_ichg_adc_0(&mut self) -> Result<IChgAdc0, BQ25887Error<I2C::Error>> {
-        let reg = self.device.ichg_adc_0().read_async().await?;
-
-        let ichg_adc = reg.ichg_adc_lsb();
-
-        Ok(IChgAdc0::new().with_ichg_adc_lsb(ichg_adc))
+    pub async fn read_ichg_adc_0(&mut self) -> Result<crate::field_sets::IchgAdc0, BQ25887Error<I2C::Error>> {
+        self.device.ichg_adc_0().read_async().await
     }
 
     /// ### Breif
@@ -838,12 +577,8 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     /// BQ255887 p.58
     /// ### Errors
     /// Returns an error if the I²C transaction fails
-    pub async fn read_vbus_adc_1(&mut self) -> Result<VBusAdc1, BQ25887Error<I2C::Error>> {
-        let reg = self.device.vbus_adc_1().read_async().await?;
-
-        let vbus_adc_msb = reg.vbus_adc_msb();
-
-        Ok(VBusAdc1::new().with_vbus_adc_msb(vbus_adc_msb))
+    pub async fn read_vbus_adc_1(&mut self) -> Result<crate::field_sets::VbusAdc1, BQ25887Error<I2C::Error>> {
+        self.device.vbus_adc_1().read_async().await
     }
 
     /// ### Breif
@@ -852,12 +587,8 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     /// BQ255887 p.58
     /// ### Errors
     /// Returns an error if the I²C transaction fails
-    pub async fn read_vbus_adc_0(&mut self) -> Result<VBusAdc0, BQ25887Error<I2C::Error>> {
-        let reg = self.device.vbus_adc_0().read_async().await?;
-
-        let vbus_adc_lsb = reg.vbus_adc_lsb();
-
-        Ok(VBusAdc0::new().with_vbus_adc_lsb(vbus_adc_lsb))
+    pub async fn read_vbus_adc_0(&mut self) -> Result<crate::field_sets::VbusAdc0, BQ25887Error<I2C::Error>> {
+        self.device.vbus_adc_0().read_async().await
     }
 
     /// ### Breif
@@ -866,12 +597,8 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     /// BQ255887 p.59
     /// ### Errors
     /// Returns an error if the I²C transaction fails
-    pub async fn read_vbat_adc_1(&mut self) -> Result<VBatAdc1, BQ25887Error<I2C::Error>> {
-        let reg = self.device.vbat_adc_1().read_async().await?;
-
-        let vbat_adc_msb = reg.vbat_adc_msb();
-
-        Ok(VBatAdc1::new().with_vbat_adc_msb(vbat_adc_msb))
+    pub async fn read_vbat_adc_1(&mut self) -> Result<crate::field_sets::VbatAdc1, BQ25887Error<I2C::Error>> {
+        self.device.vbat_adc_1().read_async().await
     }
 
     /// ### Breif
@@ -880,12 +607,8 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     /// BQ255887 p.59
     /// ### Errors
     /// Returns an error if the I²C transaction fails
-    pub async fn read_vbat_adc_0(&mut self) -> Result<VBatAdc0, BQ25887Error<I2C::Error>> {
-        let reg = self.device.vbat_adc_0().read_async().await?;
-
-        let vbat_adc_lsb = reg.vbat_adc_lsb();
-
-        Ok(VBatAdc0::new().with_vbat_adc_lsb(vbat_adc_lsb))
+    pub async fn read_vbat_adc_0(&mut self) -> Result<crate::field_sets::VbatAdc0, BQ25887Error<I2C::Error>> {
+        self.device.vbat_adc_0().read_async().await
     }
 
     /// ### Breif
@@ -894,12 +617,8 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     /// BQ255887 p.60
     /// ### Errors
     /// Returns an error if the I²C transaction fails
-    pub async fn read_vcell_top_adc_1(&mut self) -> Result<VCellTopAdc1, BQ25887Error<I2C::Error>> {
-        let reg = self.device.vcelltop_adc_1().read_async().await?;
-
-        let vcelltop_adc_msb = reg.vcelltop_adc_msb();
-
-        Ok(VCellTopAdc1::new().with_vcelltop_adc_msb(vcelltop_adc_msb))
+    pub async fn read_vcell_top_adc_1(&mut self) -> Result<crate::field_sets::VcelltopAdc1, BQ25887Error<I2C::Error>> {
+        self.device.vcelltop_adc_1().read_async().await
     }
 
     /// ### Breif
@@ -908,12 +627,8 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     /// BQ255887 p.60
     /// ### Errors
     /// Returns an error if the I²C transaction fails
-    pub async fn read_vcell_top_adc_0(&mut self) -> Result<VCellTopAdc0, BQ25887Error<I2C::Error>> {
-        let reg = self.device.vcelltop_adc_0().read_async().await?;
-
-        let vcelltop_adc_lsb = reg.vcelltop_adc_lsb();
-
-        Ok(VCellTopAdc0::new().with_vcelltop_adc_lsb(vcelltop_adc_lsb))
+    pub async fn read_vcell_top_adc_0(&mut self) -> Result<crate::field_sets::VcelltopAdc0, BQ25887Error<I2C::Error>> {
+        self.device.vcelltop_adc_0().read_async().await
     }
 
     /// ### Breif
@@ -922,12 +637,8 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     /// BQ255887 p.61
     /// ### Errors
     /// Returns an error if the I²C transaction fails
-    pub async fn read_ts_adc_1(&mut self) -> Result<TsAdc1, BQ25887Error<I2C::Error>> {
-        let reg = self.device.ts_adc_1().read_async().await?;
-
-        let ts_adc_msb = reg.ts_adc_msb();
-
-        Ok(TsAdc1::new().with_ts_adc_msb(ts_adc_msb))
+    pub async fn read_ts_adc_1(&mut self) -> Result<crate::field_sets::TsAdc1, BQ25887Error<I2C::Error>> {
+        self.device.ts_adc_1().read_async().await
     }
 
     /// ### Breif
@@ -936,12 +647,8 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     /// BQ255887 p.61
     /// ### Errors
     /// Returns an error if the I²C transaction fails
-    pub async fn read_ts_adc_0(&mut self) -> Result<TsAdc0, BQ25887Error<I2C::Error>> {
-        let reg = self.device.ts_adc_0().read_async().await?;
-
-        let ts_adc_lsb = reg.ts_adc_lsb();
-
-        Ok(TsAdc0::new().with_ts_adc_lsb(ts_adc_lsb))
+    pub async fn read_ts_adc_0(&mut self) -> Result<crate::field_sets::TsAdc0, BQ25887Error<I2C::Error>> {
+        self.device.ts_adc_0().read_async().await
     }
 
     /// ### Breif
@@ -950,12 +657,8 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     /// BQ255887 p.62
     /// ### Errors
     /// Returns an error if the I²C transaction fails
-    pub async fn read_tdie_adc_1(&mut self) -> Result<TdieAdc1, BQ25887Error<I2C::Error>> {
-        let reg = self.device.tdie_adc_1().read_async().await?;
-
-        let tdie_adc_msb = reg.tdie_adc_msb();
-
-        Ok(TdieAdc1::new().with_tdie_adc_msb(tdie_adc_msb))
+    pub async fn read_tdie_adc_1(&mut self) -> Result<crate::field_sets::TdieAdc1, BQ25887Error<I2C::Error>> {
+        self.device.tdie_adc_1().read_async().await
     }
 
     /// ### Breif
@@ -964,12 +667,8 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     /// BQ255887 p.62
     /// ### Errors
     /// Returns an error if the I²C transaction fails
-    pub async fn read_tdie_adc_0(&mut self) -> Result<TdieAdc0, BQ25887Error<I2C::Error>> {
-        let reg = self.device.tdie_adc_0().read_async().await?;
-
-        let tdie_adc_lsb = reg.tdie_adc_lsb();
-
-        Ok(TdieAdc0::new().with_tdie_adc_lsb(tdie_adc_lsb))
+    pub async fn read_tdie_adc_0(&mut self) -> Result<crate::field_sets::TdieAdc0, BQ25887Error<I2C::Error>> {
+        self.device.tdie_adc_0().read_async().await
     }
 
     /// ### Breif
@@ -978,17 +677,10 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     /// BQ255887 p.63
     /// ### Errors
     /// Returns an error if the I²C transaction fails or the register value cannot be parsed
-    pub async fn read_part_information(&mut self) -> Result<PartInformation, BQ25887Error<I2C::Error>> {
-        let reg = self.device.part_information().read_async().await?;
-
-        let reg_rst = u8::from(reg.reg_rst());
-        let pn = u8::from(reg.pn()?);
-        let dev_rev = reg.dev_rev();
-
-        Ok(PartInformation::new()
-            .with_reg_rst(reg_rst)
-            .with_pn(pn)
-            .with_dev_rev(dev_rev))
+    pub async fn read_part_information(
+        &mut self,
+    ) -> Result<crate::field_sets::PartInformation, BQ25887Error<I2C::Error>> {
+        self.device.part_information().read_async().await
     }
 
     /// ### Breif
@@ -999,15 +691,9 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     /// Returns an error if the I²C transaction fails
     pub async fn write_part_information_reg_rst(
         &mut self,
-        info: PartInformation,
+        info: crate::field_sets::PartInformation,
     ) -> Result<(), BQ25887Error<I2C::Error>> {
-        let mut buf = [0u8; LARGEST_REG_SIZE_BYTES];
-        buf[0] = info.into();
-        self.device
-            .interface()
-            .write_register(RegisterAddr::PartInformation.value(), LARGEST_REG_SIZE_BITS, &buf)
-            .await?;
-        Ok(())
+        self.device.part_information().write_async(|reg| *reg = info).await
     }
 
     /// ### Breif
@@ -1016,12 +702,8 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     /// BQ255887 p.64
     /// ### Errors
     /// Returns an error if the I²C transaction fails
-    pub async fn read_vcellbot_adc_1(&mut self) -> Result<VCellBotAdc1, BQ25887Error<I2C::Error>> {
-        let reg = self.device.vcellbot_adc_1().read_async().await?;
-
-        let vcellbot_adc_msb = reg.vcellbot_adc_msb();
-
-        Ok(VCellBotAdc1::new().with_vcellbot_adc_msb(vcellbot_adc_msb))
+    pub async fn read_vcellbot_adc_1(&mut self) -> Result<crate::field_sets::VcellbotAdc1, BQ25887Error<I2C::Error>> {
+        self.device.vcellbot_adc_1().read_async().await
     }
 
     /// ### Breif
@@ -1030,12 +712,8 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     /// BQ255887 p.64
     /// ### Errors
     /// Returns an error if the I²C transaction fails
-    pub async fn read_vcellbot_adc_0(&mut self) -> Result<VCellBotAdc0, BQ25887Error<I2C::Error>> {
-        let reg = self.device.vcellbot_adc_0().read_async().await?;
-
-        let vcellbot_adc_lsb = reg.vcellbot_adc_lsb();
-
-        Ok(VCellBotAdc0::new().with_vcellbot_adc_lsb(vcellbot_adc_lsb))
+    pub async fn read_vcellbot_adc_0(&mut self) -> Result<crate::field_sets::VcellbotAdc0, BQ25887Error<I2C::Error>> {
+        self.device.vcellbot_adc_0().read_async().await
     }
 
     /// ### Breif
@@ -1044,19 +722,10 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     /// BQ255887 p.65
     /// ### Errors
     /// Returns an error if the I²C transaction fails
-    pub async fn read_cell_balancing_control_1(&mut self) -> Result<CellBalancingControl1, BQ25887Error<I2C::Error>> {
-        let reg = self.device.cell_balance_ctrl_1().read_async().await?;
-
-        let vdiff_end_offset = u8::from(reg.vdiff_end_offset());
-        let tcb_qual_interval = u8::from(reg.tcb_qual_interval());
-        let tcb_active = u8::from(reg.tcb_active());
-        let tsettle = u8::from(reg.tsettle());
-
-        Ok(CellBalancingControl1::new()
-            .with_vdiff_end_offset(vdiff_end_offset)
-            .with_tcb_qual_interval(tcb_qual_interval)
-            .with_tcb_active(tcb_active)
-            .with_tsettle(tsettle))
+    pub async fn read_cell_balancing_control_1(
+        &mut self,
+    ) -> Result<crate::field_sets::CellBalanceCtrl1, BQ25887Error<I2C::Error>> {
+        self.device.cell_balance_ctrl_1().read_async().await
     }
 
     /// ### Breif
@@ -1067,15 +736,12 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     /// Returns an error if the I²C transaction fails
     pub async fn write_cell_balancing_control_1(
         &mut self,
-        control: CellBalancingControl1,
+        control: crate::field_sets::CellBalanceCtrl1,
     ) -> Result<(), BQ25887Error<I2C::Error>> {
-        let mut buf = [0u8; LARGEST_REG_SIZE_BYTES];
-        buf[0] = control.into();
         self.device
-            .interface()
-            .write_register(RegisterAddr::CellBalancingControl1.value(), LARGEST_REG_SIZE_BITS, &buf)
-            .await?;
-        Ok(())
+            .cell_balance_ctrl_1()
+            .write_async(|reg| *reg = control)
+            .await
     }
 
     /// ### Breif
@@ -1084,15 +750,10 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     /// BQ255887 p.66
     /// ### Errors
     /// Returns an error if the I²C transaction fails
-    pub async fn read_cell_balancing_control_2(&mut self) -> Result<CellBalancingControl2, BQ25887Error<I2C::Error>> {
-        let reg = self.device.cell_balance_ctrl_2().read_async().await?;
-
-        let vqual = u8::from(reg.vqual_th());
-        let vdiff = u8::from(reg.vdiff_start());
-
-        Ok(CellBalancingControl2::new()
-            .with_vqual_th(vqual)
-            .with_vdiff_start(vdiff))
+    pub async fn read_cell_balancing_control_2(
+        &mut self,
+    ) -> Result<crate::field_sets::CellBalanceCtrl2, BQ25887Error<I2C::Error>> {
+        self.device.cell_balance_ctrl_2().read_async().await
     }
 
     /// ### Breif
@@ -1103,15 +764,12 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     /// Returns an error if the I²C transaction fails
     pub async fn write_cell_balancing_control_2(
         &mut self,
-        control: CellBalancingControl2,
+        control: crate::field_sets::CellBalanceCtrl2,
     ) -> Result<(), BQ25887Error<I2C::Error>> {
-        let mut buf = [0u8; LARGEST_REG_SIZE_BYTES];
-        buf[0] = control.into();
         self.device
-            .interface()
-            .write_register(RegisterAddr::CellBalancingControl2.value(), LARGEST_REG_SIZE_BITS, &buf)
-            .await?;
-        Ok(())
+            .cell_balance_ctrl_2()
+            .write_async(|reg| *reg = control)
+            .await
     }
 
     /// ### Breif
@@ -1122,27 +780,8 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     /// Returns an error if the I²C transaction fails
     pub async fn read_cell_balancing_status_and_control(
         &mut self,
-    ) -> Result<CellBalancingStatusAndControl, BQ25887Error<I2C::Error>> {
-        let reg = self.device.cell_balance_stat_ctrl().read_async().await?;
-
-        let cb_chg_dis = u8::from(reg.cb_chg_dis());
-        let cb_auto_en = u8::from(reg.cb_auto_en());
-        let cb = u8::from(reg.cb_stat());
-        let hs_cv_stat = u8::from(reg.hs_cv_stat());
-        let ls_cv_stat = u8::from(reg.ls_cv_stat());
-        let hs_ov = u8::from(reg.hs_ov_stat());
-        let ls_ov = u8::from(reg.ls_ov_stat());
-        let cb_oc = u8::from(reg.cb_oc_stat());
-
-        Ok(CellBalancingStatusAndControl::new()
-            .with_cb_chg_dis(cb_chg_dis)
-            .with_cb_auto_en(cb_auto_en)
-            .with_cb_stat(cb)
-            .with_hs_cv_stat(hs_cv_stat)
-            .with_ls_cv_stat(ls_cv_stat)
-            .with_hs_ov_stat(hs_ov)
-            .with_ls_ov_stat(ls_ov)
-            .with_cb_oc_stat(cb_oc))
+    ) -> Result<crate::field_sets::CellBalanceStatCtrl, BQ25887Error<I2C::Error>> {
+        self.device.cell_balance_stat_ctrl().read_async().await
     }
 
     /// ### Breif
@@ -1153,19 +792,12 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     /// Returns an error if the I²C transaction fails
     pub async fn write_cell_balancing_status_and_control(
         &mut self,
-        control: CellBalancingStatusAndControl,
+        control: crate::field_sets::CellBalanceStatCtrl,
     ) -> Result<(), BQ25887Error<I2C::Error>> {
-        let mut buf = [0u8; LARGEST_REG_SIZE_BYTES];
-        buf[0] = control.into();
         self.device
-            .interface()
-            .write_register(
-                RegisterAddr::CellBalancingStatusAndControl.value(),
-                LARGEST_REG_SIZE_BITS,
-                &buf,
-            )
-            .await?;
-        Ok(())
+            .cell_balance_stat_ctrl()
+            .write_async(|reg| *reg = control)
+            .await
     }
 
     /// ### Breif
@@ -1174,27 +806,10 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     /// BQ255887 p.68
     /// ### Errors
     /// Returns an error if the I²C transaction fails
-    pub async fn read_cell_balancing_flag(&mut self) -> Result<CellBalancingFlag, BQ25887Error<I2C::Error>> {
-        let reg = self.device.cell_balance_flag().read_async().await?;
-
-        let qcbh_en = u8::from(reg.qcbh_en());
-        let qcbl = u8::from(reg.qcbl_en());
-        let cb_flag = u8::from(reg.cb_flag());
-        let hs_cv_flag = u8::from(reg.hs_cv_flag());
-        let ls_cv_flag = u8::from(reg.ls_cv_flag());
-        let hs_ov = u8::from(reg.hs_ov_flag());
-        let ls_ov = u8::from(reg.ls_ov_flag());
-        let cb_oc_flag = u8::from(reg.cb_oc_flag());
-
-        Ok(CellBalancingFlag::new()
-            .with_qcbh_en(qcbh_en)
-            .with_qcbl_en(qcbl)
-            .with_cb_flag(cb_flag)
-            .with_hs_cv_flag(hs_cv_flag)
-            .with_ls_cv_flag(ls_cv_flag)
-            .with_hs_ov_flag(hs_ov)
-            .with_ls_ov_flag(ls_ov)
-            .with_cb_oc_flag(cb_oc_flag))
+    pub async fn read_cell_balancing_flag(
+        &mut self,
+    ) -> Result<crate::field_sets::CellBalanceFlag, BQ25887Error<I2C::Error>> {
+        self.device.cell_balance_flag().read_async().await
     }
 
     /// ### Breif
@@ -1203,14 +818,11 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     /// BQ255887 p.68
     /// ### Errors
     /// Returns an error if the I²C transaction fails
-    pub async fn write_cell_balancing_flag(&mut self, flag: CellBalancingFlag) -> Result<(), BQ25887Error<I2C::Error>> {
-        let mut buf = [0u8; LARGEST_REG_SIZE_BYTES];
-        buf[0] = flag.into();
-        self.device
-            .interface()
-            .write_register(RegisterAddr::CellBalancingFlag.value(), LARGEST_REG_SIZE_BITS, &buf)
-            .await?;
-        Ok(())
+    pub async fn write_cell_balancing_flag(
+        &mut self,
+        flag: crate::field_sets::CellBalanceFlag,
+    ) -> Result<(), BQ25887Error<I2C::Error>> {
+        self.device.cell_balance_flag().write_async(|reg| *reg = flag).await
     }
 
     /// ### Breif
@@ -1219,23 +831,10 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     /// BQ255887 p.68
     /// ### Errors
     /// Returns an error if the I²C transaction fails
-    pub async fn read_cell_balancing_mask(&mut self) -> Result<CellBalancingMask, BQ25887Error<I2C::Error>> {
-        let reg = self.device.cell_balance_mask().read_async().await?;
-
-        let cb_mask = u8::from(reg.cb_mask());
-        let hs_cv_mask = u8::from(reg.hs_cv_mask());
-        let ls_cv_mask = u8::from(reg.ls_cv_mask());
-        let hs_ov = u8::from(reg.hs_ov_mask());
-        let ls_ov = u8::from(reg.ls_ov_mask());
-        let cb_oc = u8::from(reg.cb_oc_mask());
-
-        Ok(CellBalancingMask::new()
-            .with_cb_mask(cb_mask)
-            .with_hs_cv_mask(hs_cv_mask)
-            .with_ls_cv_mask(ls_cv_mask)
-            .with_hs_ov_mask(hs_ov)
-            .with_ls_ov_mask(ls_ov)
-            .with_cb_oc_mask(cb_oc))
+    pub async fn read_cell_balancing_mask(
+        &mut self,
+    ) -> Result<crate::field_sets::CellBalanceMask, BQ25887Error<I2C::Error>> {
+        self.device.cell_balance_mask().read_async().await
     }
 
     /// ### Breif
@@ -1244,13 +843,10 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     /// BQ255887 p.68
     /// ### Errors
     /// Returns an error if the I²C transaction fails
-    pub async fn write_cell_balancing_mask(&mut self, mask: CellBalancingMask) -> Result<(), BQ25887Error<I2C::Error>> {
-        let mut buf = [0u8; LARGEST_REG_SIZE_BYTES];
-        buf[0] = mask.into();
-        self.device
-            .interface()
-            .write_register(RegisterAddr::CellBalancingMask.value(), LARGEST_REG_SIZE_BITS, &buf)
-            .await?;
-        Ok(())
+    pub async fn write_cell_balancing_mask(
+        &mut self,
+        mask: crate::field_sets::CellBalanceMask,
+    ) -> Result<(), BQ25887Error<I2C::Error>> {
+        self.device.cell_balance_mask().write_async(|reg| *reg = mask).await
     }
 }
