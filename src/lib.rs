@@ -159,10 +159,37 @@ pub struct ConfigurationCache {
     pub charger_control_2: Option<crate::field_sets::ChargerCtrl2>,
 }
 
+/// Cached status and fault register values observed by the driver.
+#[cfg_attr(feature = "defmt-03", derive(defmt::Format))]
+#[derive(Debug, Clone, Copy, Default)]
+pub struct StatusCache {
+    /// Cached value of register 0x0B (`ChargerStatus1`) if observed.
+    pub charger_status_1: Option<crate::field_sets::ChargerStatus1>,
+    /// Cached value of register 0x0C (`ChargerStatus2`) if observed.
+    pub charger_status_2: Option<crate::field_sets::ChargerStatus2>,
+    /// Cached value of register 0x0D (`NtcStatus`) if observed.
+    pub ntc_status: Option<crate::field_sets::NtcStatus>,
+    /// Cached value of register 0x0E (`FaultStatus`) if observed.
+    pub fault_status: Option<crate::field_sets::FaultStatus>,
+    /// Cached value of register 0x0F (`ChargerFlag1`) if observed.
+    pub charger_flag_1: Option<crate::field_sets::ChargerFlag1>,
+    /// Cached value of register 0x10 (`ChargerFlag2`) if observed.
+    pub charger_flag_2: Option<crate::field_sets::ChargerFlag2>,
+    /// Cached value of register 0x11 (`FaultFlag`) if observed.
+    pub fault_flag: Option<crate::field_sets::FaultFlag>,
+    /// Cached value of register 0x12 (`ChargerMask1`) if observed.
+    pub charger_mask_1: Option<crate::field_sets::ChargerMask1>,
+    /// Cached value of register 0x13 (`ChargerMask2`) if observed.
+    pub charger_mask_2: Option<crate::field_sets::ChargerMask2>,
+    /// Cached value of register 0x14 (`FaultMask`) if observed.
+    pub fault_mask: Option<crate::field_sets::FaultMask>,
+}
+
 /// High-level async driver for the BQ25887 charger.
 pub struct Bq25887Driver<I2C: I2cTrait> {
     device: Bq25887<DeviceInterface<I2C>>,
     config_cache: ConfigurationCache,
+    status_cache: StatusCache,
     part_information_cache: Option<PartInformationSummary>,
 }
 
@@ -172,6 +199,7 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
         Bq25887Driver {
             device: Bq25887::new(DeviceInterface { i2c }),
             config_cache: ConfigurationCache::default(),
+            status_cache: StatusCache::default(),
             part_information_cache: None,
         }
     }
@@ -179,6 +207,11 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     /// Returns the cached configuration register values observed by the driver.
     pub fn configuration_cache(&self) -> &ConfigurationCache {
         &self.config_cache
+    }
+
+    /// Returns the cached status and fault register values observed by the driver.
+    pub fn status_cache(&self) -> &StatusCache {
+        &self.status_cache
     }
 
     /// Refreshes the cached configuration registers (0x00 through 0x06) by issuing reads to the device.
@@ -200,6 +233,34 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
         self.config_cache.charger_control_1 = Some(charger_control_1);
         let charger_control_2 = self.device.charger_ctrl_2().read_async().await?;
         self.config_cache.charger_control_2 = Some(charger_control_2);
+        Ok(())
+    }
+
+    /// Refreshes the cached status and fault registers (0x0B through 0x14) by issuing reads to the device.
+    ///
+    /// # Errors
+    /// Returns an error if any I²C transaction fails or if a register value cannot be parsed.
+    pub async fn refresh_status_register_cache(&mut self) -> Result<(), BQ25887Error<I2C::Error>> {
+        let charger_status_1 = self.device.charger_status_1().read_async().await?;
+        self.status_cache.charger_status_1 = Some(charger_status_1);
+        let charger_status_2 = self.device.charger_status_2().read_async().await?;
+        self.status_cache.charger_status_2 = Some(charger_status_2);
+        let ntc_status = self.device.ntc_status().read_async().await?;
+        self.status_cache.ntc_status = Some(ntc_status);
+        let fault_status = self.device.fault_status().read_async().await?;
+        self.status_cache.fault_status = Some(fault_status);
+        let charger_flag_1 = self.device.charger_flag_1().read_async().await?;
+        self.status_cache.charger_flag_1 = Some(charger_flag_1);
+        let charger_flag_2 = self.device.charger_flag_2().read_async().await?;
+        self.status_cache.charger_flag_2 = Some(charger_flag_2);
+        let fault_flag = self.device.fault_flag().read_async().await?;
+        self.status_cache.fault_flag = Some(fault_flag);
+        let charger_mask_1 = self.device.charger_mask_1().read_async().await?;
+        self.status_cache.charger_mask_1 = Some(charger_mask_1);
+        let charger_mask_2 = self.device.charger_mask_2().read_async().await?;
+        self.status_cache.charger_mask_2 = Some(charger_mask_2);
+        let fault_mask = self.device.fault_mask().read_async().await?;
+        self.status_cache.fault_mask = Some(fault_mask);
         Ok(())
     }
 
@@ -493,7 +554,12 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     pub async fn read_charger_status_1(
         &mut self,
     ) -> Result<crate::field_sets::ChargerStatus1, BQ25887Error<I2C::Error>> {
-        self.device.charger_status_1().read_async().await
+        if let Some(cached) = self.status_cache.charger_status_1 {
+            return Ok(cached);
+        }
+        let value = self.device.charger_status_1().read_async().await?;
+        self.status_cache.charger_status_1 = Some(value);
+        Ok(value)
     }
 
     /// Reads the charger status 2 register (0x0C).
@@ -504,7 +570,12 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     pub async fn read_charger_status_2(
         &mut self,
     ) -> Result<crate::field_sets::ChargerStatus2, BQ25887Error<I2C::Error>> {
-        self.device.charger_status_2().read_async().await
+        if let Some(cached) = self.status_cache.charger_status_2 {
+            return Ok(cached);
+        }
+        let value = self.device.charger_status_2().read_async().await?;
+        self.status_cache.charger_status_2 = Some(value);
+        Ok(value)
     }
 
     /// Reads the NTC status register (0x0D).
@@ -513,7 +584,12 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     ///
     /// Returns an error if the I²C transaction fails.
     pub async fn read_ntc_status(&mut self) -> Result<crate::field_sets::NtcStatus, BQ25887Error<I2C::Error>> {
-        self.device.ntc_status().read_async().await
+        if let Some(cached) = self.status_cache.ntc_status {
+            return Ok(cached);
+        }
+        let value = self.device.ntc_status().read_async().await?;
+        self.status_cache.ntc_status = Some(value);
+        Ok(value)
     }
 
     /// Reads the fault status register (0x0E).
@@ -522,7 +598,12 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     ///
     /// Returns an error if the I²C transaction fails.
     pub async fn read_fault_status(&mut self) -> Result<crate::field_sets::FaultStatus, BQ25887Error<I2C::Error>> {
-        self.device.fault_status().read_async().await
+        if let Some(cached) = self.status_cache.fault_status {
+            return Ok(cached);
+        }
+        let value = self.device.fault_status().read_async().await?;
+        self.status_cache.fault_status = Some(value);
+        Ok(value)
     }
 
     /// Reads the charger flag 1 register (0x0F).
@@ -531,7 +612,12 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     ///
     /// Returns an error if the I²C transaction fails.
     pub async fn read_charger_flag_1(&mut self) -> Result<crate::field_sets::ChargerFlag1, BQ25887Error<I2C::Error>> {
-        self.device.charger_flag_1().read_async().await
+        if let Some(cached) = self.status_cache.charger_flag_1 {
+            return Ok(cached);
+        }
+        let value = self.device.charger_flag_1().read_async().await?;
+        self.status_cache.charger_flag_1 = Some(value);
+        Ok(value)
     }
 
     /// Reads the charger flag 2 register (0x10).
@@ -540,7 +626,12 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     ///
     /// Returns an error if the I²C transaction fails.
     pub async fn read_charger_flag_2(&mut self) -> Result<crate::field_sets::ChargerFlag2, BQ25887Error<I2C::Error>> {
-        self.device.charger_flag_2().read_async().await
+        if let Some(cached) = self.status_cache.charger_flag_2 {
+            return Ok(cached);
+        }
+        let value = self.device.charger_flag_2().read_async().await?;
+        self.status_cache.charger_flag_2 = Some(value);
+        Ok(value)
     }
 
     /// Reads the fault flag register (0x11).
@@ -549,7 +640,12 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     ///
     /// Returns an error if the I²C transaction fails.
     pub async fn read_fault_flag(&mut self) -> Result<crate::field_sets::FaultFlag, BQ25887Error<I2C::Error>> {
-        self.device.fault_flag().read_async().await
+        if let Some(cached) = self.status_cache.fault_flag {
+            return Ok(cached);
+        }
+        let value = self.device.fault_flag().read_async().await?;
+        self.status_cache.fault_flag = Some(value);
+        Ok(value)
     }
 
     /// Reads the charger mask 1 register (0x12, reset = 0x00).
@@ -558,7 +654,12 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     ///
     /// Returns an error if the I²C transaction fails.
     pub async fn read_charger_mask_1(&mut self) -> Result<crate::field_sets::ChargerMask1, BQ25887Error<I2C::Error>> {
-        self.device.charger_mask_1().read_async().await
+        if let Some(cached) = self.status_cache.charger_mask_1 {
+            return Ok(cached);
+        }
+        let value = self.device.charger_mask_1().read_async().await?;
+        self.status_cache.charger_mask_1 = Some(value);
+        Ok(value)
     }
 
     /// Writes `ChargerMask1` to the charger mask 1 register (0x12, reset = 0x00).
@@ -570,7 +671,9 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
         &mut self,
         mask: crate::field_sets::ChargerMask1,
     ) -> Result<(), BQ25887Error<I2C::Error>> {
-        self.device.charger_mask_1().write_async(|reg| *reg = mask).await
+        self.device.charger_mask_1().write_async(|reg| *reg = mask).await?;
+        self.status_cache.charger_mask_1 = Some(mask);
+        Ok(())
     }
 
     /// Reads the charger mask 2 register (0x13, reset = 0x00).
@@ -579,7 +682,12 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     ///
     /// Returns an error if the I²C transaction fails.
     pub async fn read_charger_mask_2(&mut self) -> Result<crate::field_sets::ChargerMask2, BQ25887Error<I2C::Error>> {
-        self.device.charger_mask_2().read_async().await
+        if let Some(cached) = self.status_cache.charger_mask_2 {
+            return Ok(cached);
+        }
+        let value = self.device.charger_mask_2().read_async().await?;
+        self.status_cache.charger_mask_2 = Some(value);
+        Ok(value)
     }
 
     /// Writes `ChargerMask2` to the charger mask 2 register (0x13, reset = 0x00).
@@ -591,7 +699,9 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
         &mut self,
         mask: crate::field_sets::ChargerMask2,
     ) -> Result<(), BQ25887Error<I2C::Error>> {
-        self.device.charger_mask_2().write_async(|reg| *reg = mask).await
+        self.device.charger_mask_2().write_async(|reg| *reg = mask).await?;
+        self.status_cache.charger_mask_2 = Some(mask);
+        Ok(())
     }
 
     /// Reads the fault mask register (0x14, reset = 0x00).
@@ -600,7 +710,12 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     ///
     /// Returns an error if the I²C transaction fails.
     pub async fn read_fault_mask(&mut self) -> Result<crate::field_sets::FaultMask, BQ25887Error<I2C::Error>> {
-        self.device.fault_mask().read_async().await
+        if let Some(cached) = self.status_cache.fault_mask {
+            return Ok(cached);
+        }
+        let value = self.device.fault_mask().read_async().await?;
+        self.status_cache.fault_mask = Some(value);
+        Ok(value)
     }
 
     /// Writes `FaultMask` to the fault mask register (0x14, reset = 0x00).
@@ -612,7 +727,9 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
         &mut self,
         mask: crate::field_sets::FaultMask,
     ) -> Result<(), BQ25887Error<I2C::Error>> {
-        self.device.fault_mask().write_async(|reg| *reg = mask).await
+        self.device.fault_mask().write_async(|reg| *reg = mask).await?;
+        self.status_cache.fault_mask = Some(mask);
+        Ok(())
     }
 
     /// Reads the ADC control register (0x15, reset = 0x00).
@@ -810,6 +927,7 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
         reg.set_reg_rst(true);
         self.device.part_information().write_async(|r| *r = reg).await?;
         self.config_cache = ConfigurationCache::default();
+        self.status_cache = StatusCache::default();
         self.part_information_cache = None;
         Ok(())
     }
