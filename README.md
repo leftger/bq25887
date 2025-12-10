@@ -43,8 +43,12 @@ where
 {
     let mut driver = Bq25887Driver::new(i2c);
 
-    // Inspect the current regulation limit (register 0x00)
-    let limit = driver.read_voltage_regulation_limit().await?;
+    // Refresh cached register view, including the cell voltage limit (register 0x00)
+    driver.refresh_configuration_cache().await?;
+    let limit = driver
+        .configuration_cache()
+        .cell_voltage_limit
+        .expect("cache populated");
 
     // Raise the regulation voltage slightly (example value only!)
     let new_limit = limit.with_vcellreg(limit.vcellreg().saturating_add(1));

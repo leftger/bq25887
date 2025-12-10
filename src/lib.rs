@@ -183,13 +183,20 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
 
     /// Refreshes the cached configuration registers (0x00 through 0x06) by issuing reads to the device.
     pub async fn refresh_configuration_cache(&mut self) -> Result<(), BQ25887Error<I2C::Error>> {
-        self.read_voltage_regulation_limit().await?;
-        self.read_charge_current_limit().await?;
-        self.read_input_voltage_limit().await?;
-        self.read_input_current_limit().await?;
-        self.read_precharge_and_termination_current_limit().await?;
-        self.read_charger_control_1().await?;
-        self.read_charger_control_2().await?;
+        let voltage_limit = self.device.cell_voltage_limit().read_async().await?;
+        self.config_cache.cell_voltage_limit = Some(voltage_limit);
+        let charge_current_limit = self.device.charge_current_limit().read_async().await?;
+        self.config_cache.charge_current_limit = Some(charge_current_limit);
+        let input_voltage_limit = self.device.input_voltage_limit().read_async().await?;
+        self.config_cache.input_voltage_limit = Some(input_voltage_limit);
+        let input_current_limit = self.device.input_current_limit().read_async().await?;
+        self.config_cache.input_current_limit = Some(input_current_limit);
+        let prechg_term_ctrl = self.device.prechg_termination_ctrl().read_async().await?;
+        self.config_cache.precharge_termination_control = Some(prechg_term_ctrl);
+        let charger_control_1 = self.device.charger_ctrl_1().read_async().await?;
+        self.config_cache.charger_control_1 = Some(charger_control_1);
+        let charger_control_2 = self.device.charger_ctrl_2().read_async().await?;
+        self.config_cache.charger_control_2 = Some(charger_control_2);
         Ok(())
     }
 
