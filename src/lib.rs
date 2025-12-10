@@ -142,9 +142,30 @@ impl TryFrom<crate::field_sets::PartInformation> for PartInformationSummary {
     }
 }
 
+/// Cached configuration register values for addresses 0x00 through 0x06.
+#[cfg_attr(feature = "defmt-03", derive(defmt::Format))]
+#[derive(Debug, Clone, Copy, Default)]
+pub struct ConfigurationCache {
+    /// Cached value of register 0x00 (`CellVoltageLimit`) if observed.
+    pub cell_voltage_limit: Option<crate::field_sets::CellVoltageLimit>,
+    /// Cached value of register 0x01 (`ChargeCurrentLimit`) if observed.
+    pub charge_current_limit: Option<crate::field_sets::ChargeCurrentLimit>,
+    /// Cached value of register 0x02 (`InputVoltageLimit`) if observed.
+    pub input_voltage_limit: Option<crate::field_sets::InputVoltageLimit>,
+    /// Cached value of register 0x03 (`InputCurrentLimit`) if observed.
+    pub input_current_limit: Option<crate::field_sets::InputCurrentLimit>,
+    /// Cached value of register 0x04 (`PrechgTerminationCtrl`) if observed.
+    pub precharge_termination_control: Option<crate::field_sets::PrechgTerminationCtrl>,
+    /// Cached value of register 0x05 (`ChargerCtrl1`) if observed.
+    pub charger_control_1: Option<crate::field_sets::ChargerCtrl1>,
+    /// Cached value of register 0x06 (`ChargerCtrl2`) if observed.
+    pub charger_control_2: Option<crate::field_sets::ChargerCtrl2>,
+}
+
 /// High-level async driver for the BQ25887 charger.
 pub struct Bq25887Driver<I2C: I2cTrait> {
     device: Bq25887<DeviceInterface<I2C>>,
+    config_cache: ConfigurationCache,
 }
 
 impl<I2C: I2cTrait> Bq25887Driver<I2C> {
@@ -152,7 +173,25 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     pub fn new(i2c: I2C) -> Self {
         Bq25887Driver {
             device: Bq25887::new(DeviceInterface { i2c }),
+            config_cache: ConfigurationCache::default(),
         }
+    }
+
+    /// Returns the cached configuration register values observed by the driver.
+    pub fn configuration_cache(&self) -> &ConfigurationCache {
+        &self.config_cache
+    }
+
+    /// Refreshes the cached configuration registers (0x00 through 0x06) by issuing reads to the device.
+    pub async fn refresh_configuration_cache(&mut self) -> Result<(), BQ25887Error<I2C::Error>> {
+        self.read_voltage_regulation_limit().await?;
+        self.read_charge_current_limit().await?;
+        self.read_input_voltage_limit().await?;
+        self.read_input_current_limit().await?;
+        self.read_precharge_and_termination_current_limit().await?;
+        self.read_charger_control_1().await?;
+        self.read_charger_control_2().await?;
+        Ok(())
     }
 
     /// Reads the cell voltage regulation limit register (0x00, reset = 0xA0).
@@ -161,7 +200,9 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     pub async fn read_voltage_regulation_limit(
         &mut self,
     ) -> Result<crate::field_sets::CellVoltageLimit, BQ25887Error<I2C::Error>> {
-        self.device.cell_voltage_limit().read_async().await
+        let value = self.device.cell_voltage_limit().read_async().await?;
+        self.config_cache.cell_voltage_limit = Some(value);
+        Ok(value)
     }
 
     /// Writes `CellVoltageLimit` to the cell voltage regulation limit register (0x00, reset = 0xA0).
@@ -174,7 +215,9 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
         self.device
             .cell_voltage_limit()
             .write_async(|reg| *reg = volt_limit)
-            .await
+            .await?;
+        self.config_cache.cell_voltage_limit = Some(volt_limit);
+        Ok(())
     }
 
     /// Reads the charger current limit register (0x01, reset = 0x5E).
@@ -183,7 +226,9 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     pub async fn read_charge_current_limit(
         &mut self,
     ) -> Result<crate::field_sets::ChargeCurrentLimit, BQ25887Error<I2C::Error>> {
-        self.device.charge_current_limit().read_async().await
+        let value = self.device.charge_current_limit().read_async().await?;
+        self.config_cache.charge_current_limit = Some(value);
+        Ok(value)
     }
 
     /// Writes to the charger current limit register (0x01, reset = 0x5E).
@@ -196,7 +241,26 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
         self.device
             .charge_current_limit()
             .write_async(|reg| *reg = current_limit)
-            .await
+            .await?;
+        self.config_cache.charge_current_limit = Some(current_limit);
+        Ok(())
+    }
+
+    /// Enables or disables the battery connection by updating `EN_HIZ` in register 0x01.
+    ///
+    /// When `setting` is `true`, the battery connection is enabled (`EN_HIZ` cleared).
+    /// When `setting` is `false`, the charger enters high-impedance mode (`EN_HIZ` set).
+    /// The method reuses the cached register value when available to minimize I²C traffic.
+    pub async fn enable_battery_connection(&mut self, setting: bool) -> Result<(), BQ25887Error<I2C::Error>> {
+        let mut reg = if let Some(cached) = self.config_cache.charge_current_limit {
+            cached
+        } else {
+            self.device.charge_current_limit().read_async().await?
+        };
+        reg.set_en_hiz(!setting);
+        self.device.charge_current_limit().write_async(|w| *w = reg).await?;
+        self.config_cache.charge_current_limit = Some(reg);
+        Ok(())
     }
 
     /// Reads the input voltage limit register (0x02, reset = 0x84).
@@ -205,7 +269,9 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     pub async fn read_input_voltage_limit(
         &mut self,
     ) -> Result<crate::field_sets::InputVoltageLimit, BQ25887Error<I2C::Error>> {
-        self.device.input_voltage_limit().read_async().await
+        let value = self.device.input_voltage_limit().read_async().await?;
+        self.config_cache.input_voltage_limit = Some(value);
+        Ok(value)
     }
 
     /// Writes `InputVoltageLimit` to the input voltage limit register (0x02, reset = 0x84).
@@ -218,7 +284,9 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
         self.device
             .input_voltage_limit()
             .write_async(|reg| *reg = input_volt_limit)
-            .await
+            .await?;
+        self.config_cache.input_voltage_limit = Some(input_volt_limit);
+        Ok(())
     }
 
     /// Reads the input current limit register (0x03, reset = 0x39).
@@ -227,7 +295,9 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     pub async fn read_input_current_limit(
         &mut self,
     ) -> Result<crate::field_sets::InputCurrentLimit, BQ25887Error<I2C::Error>> {
-        self.device.input_current_limit().read_async().await
+        let value = self.device.input_current_limit().read_async().await?;
+        self.config_cache.input_current_limit = Some(value);
+        Ok(value)
     }
 
     /// Writes `InputCurrentLimit` to the input current limit register (0x03, reset = 0x39).
@@ -240,7 +310,9 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
         self.device
             .input_current_limit()
             .write_async(|reg| *reg = current_limit)
-            .await
+            .await?;
+        self.config_cache.input_current_limit = Some(current_limit);
+        Ok(())
     }
 
     /// Reads the precharge and termination current limit register (0x04, reset = 0x22).
@@ -249,7 +321,9 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     pub async fn read_precharge_and_termination_current_limit(
         &mut self,
     ) -> Result<crate::field_sets::PrechgTerminationCtrl, BQ25887Error<I2C::Error>> {
-        self.device.prechg_termination_ctrl().read_async().await
+        let value = self.device.prechg_termination_ctrl().read_async().await?;
+        self.config_cache.precharge_termination_control = Some(value);
+        Ok(value)
     }
 
     /// Writes `PrechgTerminationCtrl` to the precharge and termination current limit register (0x04, reset = 0x22).
@@ -262,7 +336,9 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
         self.device
             .prechg_termination_ctrl()
             .write_async(|reg| *reg = current_limit)
-            .await
+            .await?;
+        self.config_cache.precharge_termination_control = Some(current_limit);
+        Ok(())
     }
 
     /// Reads the charger control 1 register (0x05, reset = 0x9D).
@@ -271,7 +347,9 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     pub async fn read_charger_control_1(
         &mut self,
     ) -> Result<crate::field_sets::ChargerCtrl1, BQ25887Error<I2C::Error>> {
-        self.device.charger_ctrl_1().read_async().await
+        let value = self.device.charger_ctrl_1().read_async().await?;
+        self.config_cache.charger_control_1 = Some(value);
+        Ok(value)
     }
 
     /// Writes `ChargerCtrl1` to the charger control 1 register (0x05, reset = 0x9D).
@@ -281,7 +359,9 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
         &mut self,
         control: crate::field_sets::ChargerCtrl1,
     ) -> Result<(), BQ25887Error<I2C::Error>> {
-        self.device.charger_ctrl_1().write_async(|reg| *reg = control).await
+        self.device.charger_ctrl_1().write_async(|reg| *reg = control).await?;
+        self.config_cache.charger_control_1 = Some(control);
+        Ok(())
     }
 
     /// Reads the charger control 2 register (0x06, reset = 0x7D).
@@ -290,7 +370,9 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     pub async fn read_charger_control_2(
         &mut self,
     ) -> Result<crate::field_sets::ChargerCtrl2, BQ25887Error<I2C::Error>> {
-        self.device.charger_ctrl_2().read_async().await
+        let value = self.device.charger_ctrl_2().read_async().await?;
+        self.config_cache.charger_control_2 = Some(value);
+        Ok(value)
     }
 
     /// Writes `ChargerCtrl2` to the charger control 2 register (0x06, reset = 0x7D).
@@ -300,7 +382,9 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
         &mut self,
         control: crate::field_sets::ChargerCtrl2,
     ) -> Result<(), BQ25887Error<I2C::Error>> {
-        self.device.charger_ctrl_2().write_async(|reg| *reg = control).await
+        self.device.charger_ctrl_2().write_async(|reg| *reg = control).await?;
+        self.config_cache.charger_control_2 = Some(control);
+        Ok(())
     }
 
     /// Reads the charger control 3 register (0x07, reset = 0x00).
