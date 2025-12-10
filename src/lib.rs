@@ -31,7 +31,7 @@
 //!
 //! [`embedded-hal-async`]: https://docs.rs/embedded-hal-async
 //! [datasheet]: https://www.ti.com/lit/ug/slusd89b/slusd89b.pdf
-#![cfg_attr(docsrs, feature(doc_cfg, doc_auto_cfg))]
+#![cfg_attr(docsrs, feature(doc_cfg))]
 #![cfg_attr(not(test), no_std)]
 #![warn(missing_docs, rustdoc::broken_intra_doc_links)]
 #![doc(html_root_url = "https://docs.rs/bq25887")]
@@ -126,8 +126,6 @@ pub struct PartInformationSummary {
     pub part_number: Pn,
     /// Raw device revision field (lower 4 bits of register 0x25).
     pub device_revision: u8,
-    /// Indicates whether the `REG_RST` bit is asserted.
-    pub register_reset: bool,
 }
 
 impl TryFrom<crate::field_sets::PartInformation> for PartInformationSummary {
@@ -137,7 +135,6 @@ impl TryFrom<crate::field_sets::PartInformation> for PartInformationSummary {
         Ok(PartInformationSummary {
             part_number: value.pn()?,
             device_revision: value.dev_rev(),
-            register_reset: value.reg_rst(),
         })
     }
 }
@@ -166,6 +163,7 @@ pub struct ConfigurationCache {
 pub struct Bq25887Driver<I2C: I2cTrait> {
     device: Bq25887<DeviceInterface<I2C>>,
     config_cache: ConfigurationCache,
+    part_information_cache: Option<PartInformationSummary>,
 }
 
 impl<I2C: I2cTrait> Bq25887Driver<I2C> {
@@ -174,6 +172,7 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
         Bq25887Driver {
             device: Bq25887::new(DeviceInterface { i2c }),
             config_cache: ConfigurationCache::default(),
+            part_information_cache: None,
         }
     }
 
@@ -675,36 +674,23 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
         self.device.tdie_adc_0().read_async().await
     }
 
-    /// ### Brief
-    /// Reads Part Information Register,
-    /// (Address = 0x25) (reset = 0x28)
-    /// BQ255887 p.63
-    /// ### Errors
-    /// Returns an error if the I²C transaction fails or the register value cannot be parsed
-    pub async fn read_part_information(
-        &mut self,
-    ) -> Result<crate::field_sets::PartInformation, BQ25887Error<I2C::Error>> {
-        self.device.part_information().read_async().await
-    }
-
     /// Reads register 0x25 and returns parsed identification details.
-    pub async fn read_part_information_summary(&mut self) -> Result<PartInformationSummary, BQ25887Error<I2C::Error>> {
-        let reg = self.read_part_information().await?;
+    pub async fn read_part_information(&mut self) -> Result<PartInformationSummary, BQ25887Error<I2C::Error>> {
+        let reg = self.device.part_information().read_async().await?;
         let summary = PartInformationSummary::try_from(reg).map_err(BQ25887Error::from)?;
+        self.part_information_cache = Some(summary);
         Ok(summary)
     }
 
-    /// ### Brief
-    /// Writes Part Information Register,
-    /// (Address = 0x25) (reset = 0x28)
-    /// BQ255887 p.63
-    /// ### Errors
-    /// Returns an error if the I²C transaction fails
-    pub async fn write_part_information_reg_rst(
-        &mut self,
-        info: crate::field_sets::PartInformation,
-    ) -> Result<(), BQ25887Error<I2C::Error>> {
-        self.device.part_information().write_async(|reg| *reg = info).await
+    /// Issues a master reset by asserting `REG_RST` in register 0x25.
+    /// The method preserves the reported part number, writes the reset command to the device, and clears the driver's configuration cache so subsequent reads are refreshed.
+    pub async fn master_reset(&mut self) -> Result<(), BQ25887Error<I2C::Error>> {
+        let mut reg = self.device.part_information().read_async().await?;
+        reg.set_reg_rst(true);
+        self.device.part_information().write_async(|r| *r = reg).await?;
+        self.config_cache = ConfigurationCache::default();
+        self.part_information_cache = None;
+        Ok(())
     }
 
     /// ### Brief

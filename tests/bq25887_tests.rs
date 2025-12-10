@@ -1,10 +1,15 @@
 #![allow(missing_docs)]
 
-use core::convert::TryFrom;
+use core::cmp::min;
+use core::convert::{Infallible, TryFrom};
+use std::cell::RefCell;
+use std::rc::Rc;
 
 use bq25887::field_sets::{ChargeCurrentLimit, FieldSetValue, PartInformation};
-use bq25887::{Bq25887, Ichg, PartInformationSummary, Pn};
+use bq25887::{Bq25887, Bq25887Driver, Ichg, PartInformationSummary, Pn};
 use device_driver::RegisterInterface;
+use embedded_hal_async::i2c::{ErrorType, I2c, Operation};
+use futures::executor::block_on;
 
 struct DummyInterface;
 
@@ -100,7 +105,6 @@ fn test_part_information_summary_success() {
 
     assert_eq!(summary.part_number, Pn::Bq25887);
     assert_eq!(summary.device_revision, 0);
-    assert!(!summary.register_reset);
 }
 
 #[test]
@@ -110,7 +114,6 @@ fn test_part_information_summary_register_reset() {
 
     assert_eq!(summary.part_number, Pn::Bq25887);
     assert_eq!(summary.device_revision, 0);
-    assert!(summary.register_reset);
 }
 
 #[test]
@@ -124,4 +127,87 @@ fn test_part_information_summary_invalid_pn() {
 fn test_reg01_defaults() {
     let reg = ChargeCurrentLimit::new();
     assert_eq!(<[u8; 1]>::from(reg), [0x5E]);
+}
+
+#[test]
+fn test_master_reset_asserts_reg_rst_and_clears_cache() {
+    let i2c = DummyAsyncI2c::new(vec![0x28]);
+    let state = i2c.state();
+    let mut driver = Bq25887Driver::new(i2c);
+
+    block_on(driver.read_charge_current_limit()).unwrap();
+    assert!(driver.configuration_cache().charge_current_limit.is_some());
+
+    block_on(driver.master_reset()).unwrap();
+
+    assert!(driver.configuration_cache().charge_current_limit.is_none());
+
+    let writes = state.borrow().last_write.clone();
+    assert_eq!(writes, vec![0x25, 0xA8]);
+}
+
+/// Minimal async I²C mock that records the most recent write payload.
+/// It returns a fixed buffer for reads so the device-under-test observes a stable part
+/// information value while the test runs.
+#[derive(Clone)]
+struct DummyAsyncI2c {
+    state: Rc<RefCell<DummyAsyncI2cState>>,
+}
+
+struct DummyAsyncI2cState {
+    read_data: Vec<u8>,
+    last_write: Vec<u8>,
+}
+
+impl DummyAsyncI2c {
+    fn new(read_data: Vec<u8>) -> Self {
+        Self {
+            state: Rc::new(RefCell::new(DummyAsyncI2cState {
+                read_data,
+                last_write: Vec::new(),
+            })),
+        }
+    }
+
+    fn state(&self) -> Rc<RefCell<DummyAsyncI2cState>> {
+        Rc::clone(&self.state)
+    }
+}
+
+impl ErrorType for DummyAsyncI2c {
+    type Error = Infallible;
+}
+
+impl I2c for DummyAsyncI2c {
+    async fn read(&mut self, _address: u8, buffer: &mut [u8]) -> Result<(), Self::Error> {
+        let state = self.state.borrow();
+        if let Some(&first) = state.read_data.first() {
+            buffer.fill(first);
+            let len = min(buffer.len(), state.read_data.len());
+            buffer[..len].copy_from_slice(&state.read_data[..len]);
+        } else {
+            buffer.fill(0);
+        }
+        Ok(())
+    }
+
+    async fn write(&mut self, _address: u8, bytes: &[u8]) -> Result<(), Self::Error> {
+        self.state.borrow_mut().last_write = bytes.to_vec();
+        Ok(())
+    }
+
+    async fn write_read(&mut self, address: u8, bytes: &[u8], buffer: &mut [u8]) -> Result<(), Self::Error> {
+        self.write(address, bytes).await?;
+        self.read(address, buffer).await
+    }
+
+    async fn transaction(&mut self, address: u8, operations: &mut [Operation<'_>]) -> Result<(), Self::Error> {
+        for op in operations {
+            match op {
+                Operation::Read(buf) => self.read(address, buf).await?,
+                Operation::Write(buf) => self.write(address, buf).await?,
+            }
+        }
+        Ok(())
+    }
 }
