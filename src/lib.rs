@@ -182,6 +182,9 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     }
 
     /// Refreshes the cached configuration registers (0x00 through 0x06) by issuing reads to the device.
+    ///
+    /// # Errors
+    /// Returns an error if any I²C transaction fails or if a register value cannot be parsed.
     pub async fn refresh_configuration_cache(&mut self) -> Result<(), BQ25887Error<I2C::Error>> {
         let voltage_limit = self.device.cell_voltage_limit().read_async().await?;
         self.config_cache.cell_voltage_limit = Some(voltage_limit);
@@ -202,6 +205,8 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
 
     /// Reads the cell voltage regulation limit register (0x00, reset = 0xA0).
     ///
+    /// # Errors
+    ///
     /// Returns an error if the I²C transaction fails or the register value cannot be parsed.
     pub async fn read_voltage_regulation_limit(
         &mut self,
@@ -212,6 +217,8 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     }
 
     /// Writes `CellVoltageLimit` to the cell voltage regulation limit register (0x00, reset = 0xA0).
+    ///
+    /// # Errors
     ///
     /// Returns an error if the I²C transaction fails.
     pub async fn write_voltage_regulation_limit(
@@ -228,6 +235,8 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
 
     /// Reads the charger current limit register (0x01, reset = 0x5E).
     ///
+    /// # Errors
+    ///
     /// Returns an error if the I²C transaction fails or the register value cannot be parsed.
     pub async fn read_charge_current_limit(
         &mut self,
@@ -238,6 +247,8 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     }
 
     /// Writes to the charger current limit register (0x01, reset = 0x5E).
+    ///
+    /// # Errors
     ///
     /// Returns an error if the I²C transaction fails.
     pub async fn write_charge_current_limit(
@@ -257,6 +268,10 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     /// When `setting` is `true`, the battery connection is enabled (`EN_HIZ` cleared).
     /// When `setting` is `false`, the charger enters high-impedance mode (`EN_HIZ` set).
     /// The method reuses the cached register value when available to minimize I²C traffic.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`BQ25887Error::I2c`] if the underlying read or write of register 0x01 fails, or [`BQ25887Error::Conversion`] if the freshly read register image cannot be parsed.
     pub async fn enable_battery_connection(&mut self, setting: bool) -> Result<(), BQ25887Error<I2C::Error>> {
         let mut reg = if let Some(cached) = self.config_cache.charge_current_limit {
             cached
@@ -271,6 +286,8 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
 
     /// Reads the input voltage limit register (0x02, reset = 0x84).
     ///
+    /// # Errors
+    ///
     /// Returns an error if the I²C transaction fails or the register value cannot be parsed.
     pub async fn read_input_voltage_limit(
         &mut self,
@@ -281,6 +298,8 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     }
 
     /// Writes `InputVoltageLimit` to the input voltage limit register (0x02, reset = 0x84).
+    ///
+    /// # Errors
     ///
     /// Returns an error if the I²C transaction fails.
     pub async fn write_input_voltage_limit(
@@ -297,6 +316,8 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
 
     /// Reads the input current limit register (0x03, reset = 0x39).
     ///
+    /// # Errors
+    ///
     /// Returns an error if the I²C transaction fails or the register value cannot be parsed.
     pub async fn read_input_current_limit(
         &mut self,
@@ -307,6 +328,8 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     }
 
     /// Writes `InputCurrentLimit` to the input current limit register (0x03, reset = 0x39).
+    ///
+    /// # Errors
     ///
     /// Returns an error if the I²C transaction fails.
     pub async fn write_input_current_limit(
@@ -323,6 +346,8 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
 
     /// Reads the precharge and termination current limit register (0x04, reset = 0x22).
     ///
+    /// # Errors
+    ///
     /// Returns an error if the I²C transaction fails or the register value cannot be parsed.
     pub async fn read_precharge_and_termination_current_limit(
         &mut self,
@@ -333,6 +358,8 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     }
 
     /// Writes `PrechgTerminationCtrl` to the precharge and termination current limit register (0x04, reset = 0x22).
+    ///
+    /// # Errors
     ///
     /// Returns an error if the I²C transaction fails.
     pub async fn write_precharge_and_termination_current_limit(
@@ -349,6 +376,8 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
 
     /// Reads the charger control 1 register (0x05, reset = 0x9D).
     ///
+    /// # Errors
+    ///
     /// Returns an error if the I²C transaction fails.
     pub async fn read_charger_control_1(
         &mut self,
@@ -359,6 +388,8 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     }
 
     /// Writes `ChargerCtrl1` to the charger control 1 register (0x05, reset = 0x9D).
+    ///
+    /// # Errors
     ///
     /// Returns an error if the I²C transaction fails.
     pub async fn write_charger_control_1(
@@ -372,6 +403,8 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
 
     /// Reads the charger control 2 register (0x06, reset = 0x7D).
     ///
+    /// # Errors
+    ///
     /// Returns an error if the I²C transaction fails.
     pub async fn read_charger_control_2(
         &mut self,
@@ -382,6 +415,8 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     }
 
     /// Writes `ChargerCtrl2` to the charger control 2 register (0x06, reset = 0x7D).
+    ///
+    /// # Errors
     ///
     /// Returns an error if the I²C transaction fails.
     pub async fn write_charger_control_2(
@@ -395,6 +430,8 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
 
     /// Reads the charger control 3 register (0x07, reset = 0x00).
     ///
+    /// # Errors
+    ///
     /// Returns an error if the I²C transaction fails.
     pub async fn read_charger_control_3(
         &mut self,
@@ -403,6 +440,8 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     }
 
     /// Writes `ChargerCtrl3` to the charger control 3 register (0x07, reset = 0x00).
+    ///
+    /// # Errors
     ///
     /// Returns an error if the I²C transaction fails.
     pub async fn write_charger_control_3(
@@ -414,6 +453,8 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
 
     /// Reads the charger control 4 register (0x08, reset = 0x0D).
     ///
+    /// # Errors
+    ///
     /// Returns an error if the I²C transaction fails.
     pub async fn read_charger_control_4(
         &mut self,
@@ -422,6 +463,8 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     }
 
     /// Writes `ChargerCtrl4` to the charger control 4 register (0x08, reset = 0x0D).
+    ///
+    /// # Errors
     ///
     /// Returns an error if the I²C transaction fails.
     pub async fn write_charger_control_4(
@@ -433,6 +476,8 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
 
     /// Reads the ICO current limit register (0x0A).
     ///
+    /// # Errors
+    ///
     /// Returns an error if the I²C transaction fails.
     pub async fn read_ico_current_limit_in_use(
         &mut self,
@@ -441,6 +486,8 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     }
 
     /// Reads the charger status 1 register (0x0B).
+    ///
+    /// # Errors
     ///
     /// Returns an error if the I²C transaction fails.
     pub async fn read_charger_status_1(
@@ -451,6 +498,8 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
 
     /// Reads the charger status 2 register (0x0C).
     ///
+    /// # Errors
+    ///
     /// Returns an error if the I²C transaction fails.
     pub async fn read_charger_status_2(
         &mut self,
@@ -460,12 +509,16 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
 
     /// Reads the NTC status register (0x0D).
     ///
+    /// # Errors
+    ///
     /// Returns an error if the I²C transaction fails.
     pub async fn read_ntc_status(&mut self) -> Result<crate::field_sets::NtcStatus, BQ25887Error<I2C::Error>> {
         self.device.ntc_status().read_async().await
     }
 
     /// Reads the fault status register (0x0E).
+    ///
+    /// # Errors
     ///
     /// Returns an error if the I²C transaction fails.
     pub async fn read_fault_status(&mut self) -> Result<crate::field_sets::FaultStatus, BQ25887Error<I2C::Error>> {
@@ -474,12 +527,16 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
 
     /// Reads the charger flag 1 register (0x0F).
     ///
+    /// # Errors
+    ///
     /// Returns an error if the I²C transaction fails.
     pub async fn read_charger_flag_1(&mut self) -> Result<crate::field_sets::ChargerFlag1, BQ25887Error<I2C::Error>> {
         self.device.charger_flag_1().read_async().await
     }
 
     /// Reads the charger flag 2 register (0x10).
+    ///
+    /// # Errors
     ///
     /// Returns an error if the I²C transaction fails.
     pub async fn read_charger_flag_2(&mut self) -> Result<crate::field_sets::ChargerFlag2, BQ25887Error<I2C::Error>> {
@@ -488,6 +545,8 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
 
     /// Reads the fault flag register (0x11).
     ///
+    /// # Errors
+    ///
     /// Returns an error if the I²C transaction fails.
     pub async fn read_fault_flag(&mut self) -> Result<crate::field_sets::FaultFlag, BQ25887Error<I2C::Error>> {
         self.device.fault_flag().read_async().await
@@ -495,12 +554,16 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
 
     /// Reads the charger mask 1 register (0x12, reset = 0x00).
     ///
+    /// # Errors
+    ///
     /// Returns an error if the I²C transaction fails.
     pub async fn read_charger_mask_1(&mut self) -> Result<crate::field_sets::ChargerMask1, BQ25887Error<I2C::Error>> {
         self.device.charger_mask_1().read_async().await
     }
 
     /// Writes `ChargerMask1` to the charger mask 1 register (0x12, reset = 0x00).
+    ///
+    /// # Errors
     ///
     /// Returns an error if the I²C transaction fails.
     pub async fn write_charger_mask_1(
@@ -512,12 +575,16 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
 
     /// Reads the charger mask 2 register (0x13, reset = 0x00).
     ///
+    /// # Errors
+    ///
     /// Returns an error if the I²C transaction fails.
     pub async fn read_charger_mask_2(&mut self) -> Result<crate::field_sets::ChargerMask2, BQ25887Error<I2C::Error>> {
         self.device.charger_mask_2().read_async().await
     }
 
     /// Writes `ChargerMask2` to the charger mask 2 register (0x13, reset = 0x00).
+    ///
+    /// # Errors
     ///
     /// Returns an error if the I²C transaction fails.
     pub async fn write_charger_mask_2(
@@ -529,12 +596,16 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
 
     /// Reads the fault mask register (0x14, reset = 0x00).
     ///
+    /// # Errors
+    ///
     /// Returns an error if the I²C transaction fails.
     pub async fn read_fault_mask(&mut self) -> Result<crate::field_sets::FaultMask, BQ25887Error<I2C::Error>> {
         self.device.fault_mask().read_async().await
     }
 
     /// Writes `FaultMask` to the fault mask register (0x14, reset = 0x00).
+    ///
+    /// # Errors
     ///
     /// Returns an error if the I²C transaction fails.
     pub async fn write_fault_mask(
@@ -546,12 +617,16 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
 
     /// Reads the ADC control register (0x15, reset = 0x00).
     ///
+    /// # Errors
+    ///
     /// Returns an error if the I²C transaction fails.
     pub async fn read_adc_control(&mut self) -> Result<crate::field_sets::AdcControl, BQ25887Error<I2C::Error>> {
         self.device.adc_control().read_async().await
     }
 
     /// Writes `AdcControl` to the ADC control register (0x15, reset = 0x00).
+    ///
+    /// # Errors
     ///
     /// Returns an error if the I²C transaction fails.
     pub async fn write_adc_control(
@@ -563,6 +638,8 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
 
     /// Reads the ADC function disable register (0x16, reset = 0x00).
     ///
+    /// # Errors
+    ///
     /// Returns an error if the I²C transaction fails.
     pub async fn read_adc_function_disable(
         &mut self,
@@ -571,6 +648,8 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     }
 
     /// Writes `AdcFunctionDisable` to the ADC function disable register (0x16, reset = 0x00).
+    ///
+    /// # Errors
     ///
     /// Returns an error if the I²C transaction fails.
     pub async fn write_adc_function_disable(
@@ -585,12 +664,16 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
 
     /// Reads the IBUS ADC MSB register (0x17, reset = 0x00).
     ///
+    /// # Errors
+    ///
     /// Returns an error if the I²C transaction fails.
     pub async fn read_ibus_adc_1(&mut self) -> Result<crate::field_sets::IbusAdc1, BQ25887Error<I2C::Error>> {
         self.device.ibus_adc_1().read_async().await
     }
 
     /// Reads the IBUS ADC LSB register (0x18, reset = 0x00).
+    ///
+    /// # Errors
     ///
     /// Returns an error if the I²C transaction fails.
     pub async fn read_ibus_adc_0(&mut self) -> Result<crate::field_sets::IbusAdc0, BQ25887Error<I2C::Error>> {
@@ -599,12 +682,16 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
 
     /// Reads the ICHG ADC MSB register (0x19, reset = 0x00).
     ///
+    /// # Errors
+    ///
     /// Returns an error if the I²C transaction fails.
     pub async fn read_ichg_adc_1(&mut self) -> Result<crate::field_sets::IchgAdc1, BQ25887Error<I2C::Error>> {
         self.device.ichg_adc_1().read_async().await
     }
 
     /// Reads the ICHG ADC LSB register (0x1A, reset = 0x00).
+    ///
+    /// # Errors
     ///
     /// Returns an error if the I²C transaction fails.
     pub async fn read_ichg_adc_0(&mut self) -> Result<crate::field_sets::IchgAdc0, BQ25887Error<I2C::Error>> {
@@ -613,12 +700,16 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
 
     /// Reads the VBUS ADC MSB register (0x1B, reset = 0x00).
     ///
+    /// # Errors
+    ///
     /// Returns an error if the I²C transaction fails.
     pub async fn read_vbus_adc_1(&mut self) -> Result<crate::field_sets::VbusAdc1, BQ25887Error<I2C::Error>> {
         self.device.vbus_adc_1().read_async().await
     }
 
     /// Reads the VBUS ADC LSB register (0x1C, reset = 0x00).
+    ///
+    /// # Errors
     ///
     /// Returns an error if the I²C transaction fails.
     pub async fn read_vbus_adc_0(&mut self) -> Result<crate::field_sets::VbusAdc0, BQ25887Error<I2C::Error>> {
@@ -627,12 +718,16 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
 
     /// Reads the VBAT ADC MSB register (0x1D, reset = 0x00).
     ///
+    /// # Errors
+    ///
     /// Returns an error if the I²C transaction fails.
     pub async fn read_vbat_adc_1(&mut self) -> Result<crate::field_sets::VbatAdc1, BQ25887Error<I2C::Error>> {
         self.device.vbat_adc_1().read_async().await
     }
 
     /// Reads the VBAT ADC LSB register (0x1E, reset = 0x00).
+    ///
+    /// # Errors
     ///
     /// Returns an error if the I²C transaction fails.
     pub async fn read_vbat_adc_0(&mut self) -> Result<crate::field_sets::VbatAdc0, BQ25887Error<I2C::Error>> {
@@ -641,12 +736,16 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
 
     /// Reads the VCELLTOP ADC MSB register (0x1F, reset = 0x00).
     ///
+    /// # Errors
+    ///
     /// Returns an error if the I²C transaction fails.
     pub async fn read_vcell_top_adc_1(&mut self) -> Result<crate::field_sets::VcelltopAdc1, BQ25887Error<I2C::Error>> {
         self.device.vcelltop_adc_1().read_async().await
     }
 
     /// Reads the VCELLTOP ADC LSB register (0x20, reset = 0x00).
+    ///
+    /// # Errors
     ///
     /// Returns an error if the I²C transaction fails.
     pub async fn read_vcell_top_adc_0(&mut self) -> Result<crate::field_sets::VcelltopAdc0, BQ25887Error<I2C::Error>> {
@@ -655,12 +754,16 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
 
     /// Reads the TS ADC MSB register (0x21, reset = 0x00).
     ///
+    /// # Errors
+    ///
     /// Returns an error if the I²C transaction fails.
     pub async fn read_ts_adc_1(&mut self) -> Result<crate::field_sets::TsAdc1, BQ25887Error<I2C::Error>> {
         self.device.ts_adc_1().read_async().await
     }
 
     /// Reads the TS ADC LSB register (0x22, reset = 0x00).
+    ///
+    /// # Errors
     ///
     /// Returns an error if the I²C transaction fails.
     pub async fn read_ts_adc_0(&mut self) -> Result<crate::field_sets::TsAdc0, BQ25887Error<I2C::Error>> {
@@ -669,6 +772,8 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
 
     /// Reads the TDIE ADC MSB register (0x23, reset = 0x00).
     ///
+    /// # Errors
+    ///
     /// Returns an error if the I²C transaction fails.
     pub async fn read_tdie_adc_1(&mut self) -> Result<crate::field_sets::TdieAdc1, BQ25887Error<I2C::Error>> {
         self.device.tdie_adc_1().read_async().await
@@ -676,12 +781,17 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
 
     /// Reads the TDIE ADC LSB register (0x24, reset = 0x00).
     ///
+    /// # Errors
+    ///
     /// Returns an error if the I²C transaction fails.
     pub async fn read_tdie_adc_0(&mut self) -> Result<crate::field_sets::TdieAdc0, BQ25887Error<I2C::Error>> {
         self.device.tdie_adc_0().read_async().await
     }
 
     /// Reads register 0x25 and returns parsed identification details.
+    ///
+    /// # Errors
+    /// Returns an error if the I²C transaction fails.
     pub async fn read_part_information(&mut self) -> Result<PartInformationSummary, BQ25887Error<I2C::Error>> {
         let reg = self.device.part_information().read_async().await?;
         let summary = PartInformationSummary::try_from(reg).map_err(BQ25887Error::from)?;
@@ -691,6 +801,10 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
 
     /// Issues a master reset by asserting `REG_RST` in register 0x25.
     /// The method preserves the reported part number, writes the reset command to the device, and clears the driver's configuration cache so subsequent reads are refreshed.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`BQ25887Error::I2c`] if either the read or write of register 0x25 fails.
     pub async fn master_reset(&mut self) -> Result<(), BQ25887Error<I2C::Error>> {
         let mut reg = self.device.part_information().read_async().await?;
         reg.set_reg_rst(true);
