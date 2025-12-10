@@ -914,18 +914,18 @@ ADC_CONTROL:
       description: ADC resolution and timing
       conversion:
         name: ADC_SAMPLE
-        Bits12:
-          value: 0b00
-          description: 12-bit (3ms)
-        Bits13:
-          value: 0b01
-          description: 13-bit (6ms)
-        Bits14:
-          value: 0b10
-          description: 14-bit (12ms)
         Bits15:
-          value: 0b11
+          value: 0b00
           description: 15-bit (24ms)
+        Bits14:
+          value: 0b01
+          description: 14-bit (12ms)
+        Bits13:
+          value: 0b10
+          description: 13-bit (6ms)
+        Bits12:
+          value: 0b11
+          description: 12-bit (3ms)
 ADC_FUNCTION_DISABLE:
   type: register
   description: ADC Function Disable Register
@@ -933,13 +933,13 @@ ADC_FUNCTION_DISABLE:
   size_bits: 8
   reset_value: 0x00
   fields:
-    IBUS_ADC_DIS: {base: bool, start: 7}
-    ICHG_ADC_DIS: {base: bool, start: 6}
-    VBUS_ADC_DIS: {base: bool, start: 5}
-    VBAT_ADC_DIS: {base: bool, start: 4}
-    TS_ADC_DIS: {base: bool, start: 2}
-    VCELL_ADC_DIS: {base: bool, start: 1}
-    TDIE_ADC_DIS: {base: bool, start: 0}
+    IBUS_ADC_DIS: { base: bool, start: 7 }
+    ICHG_ADC_DIS: { base: bool, start: 6 }
+    VBUS_ADC_DIS: { base: bool, start: 5 }
+    VBAT_ADC_DIS: { base: bool, start: 4 }
+    TS_ADC_DIS: { base: bool, start: 2 }
+    VCELL_ADC_DIS: { base: bool, start: 1 }
+    TDIE_ADC_DIS: { base: bool, start: 0 }
 IBUS_ADC1:
   type: register
   description: IBUS ADC High Byte
@@ -947,7 +947,7 @@ IBUS_ADC1:
   size_bits: 8
   reset_value: 0x00
   fields:
-    IBUS_ADC_MSB: {base: uint, start: 0, end: 8}
+    IBUS_ADC_MSB: { base: uint, start: 0, end: 8 }
 IBUS_ADC0:
   type: register
   description: IBUS ADC Low Byte
@@ -955,7 +955,7 @@ IBUS_ADC0:
   size_bits: 8
   reset_value: 0x00
   fields:
-    IBUS_ADC_LSB: {base: uint, start: 0, end: 8}
+    IBUS_ADC_LSB: { base: uint, start: 0, end: 8 }
 ICHG_ADC1:
   type: register
   description: ICHG ADC High Byte
@@ -963,7 +963,7 @@ ICHG_ADC1:
   size_bits: 8
   reset_value: 0x00
   fields:
-    ICHG_ADC_MSB: {base: uint, start: 0, end: 8}
+    ICHG_ADC_MSB: { base: uint, start: 0, end: 8 }
 ICHG_ADC0:
   type: register
   description: ICHG ADC Low Byte
@@ -971,7 +971,7 @@ ICHG_ADC0:
   size_bits: 8
   reset_value: 0x00
   fields:
-    ICHG_ADC_LSB: {base: uint, start: 0, end: 8}
+    ICHG_ADC_LSB: { base: uint, start: 0, end: 8 }
 VBUS_ADC1:
   type: register
   description: VBUS ADC High Byte
@@ -979,7 +979,7 @@ VBUS_ADC1:
   size_bits: 8
   reset_value: 0x00
   fields:
-    VBUS_ADC_MSB: {base: uint, start: 0, end: 8}
+    VBUS_ADC_MSB: { base: uint, start: 0, end: 8 }
 VBUS_ADC0:
   type: register
   description: VBUS ADC Low Byte
@@ -987,7 +987,7 @@ VBUS_ADC0:
   size_bits: 8
   reset_value: 0x00
   fields:
-    VBUS_ADC_LSB: {base: uint, start: 0, end: 8}
+    VBUS_ADC_LSB: { base: uint, start: 0, end: 8 }
 VBAT_ADC1:
   type: register
   description: VBAT ADC High Byte
@@ -995,7 +995,7 @@ VBAT_ADC1:
   size_bits: 8
   reset_value: 0x00
   fields:
-    VBAT_ADC_MSB: {base: uint, start: 0, end: 8}
+    VBAT_ADC_MSB: { base: uint, start: 0, end: 8 }
 VBAT_ADC0:
   type: register
   description: VBAT ADC Low Byte
@@ -1003,7 +1003,7 @@ VBAT_ADC0:
   size_bits: 8
   reset_value: 0x00
   fields:
-    VBAT_ADC_LSB: {base: uint, start: 0, end: 8}
+    VBAT_ADC_LSB: { base: uint, start: 0, end: 8 }
 VCELLTOP_ADC1:
   type: register
   description: VCELLTOP ADC High Byte
@@ -1011,7 +1011,7 @@ VCELLTOP_ADC1:
   size_bits: 8
   reset_value: 0x00
   fields:
-    VCELLTOP_ADC_MSB: {base: uint, start: 0, end: 8}
+    VCELLTOP_ADC_MSB: { base: uint, start: 0, end: 8 }
 VCELLTOP_ADC0:
   type: register
   description: VCELLTOP ADC Low Byte
@@ -1019,7 +1019,7 @@ VCELLTOP_ADC0:
   size_bits: 8
   reset_value: 0x00
   fields:
-    VCELLTOP_ADC_LSB: {base: uint, start: 0, end: 8}
+    VCELLTOP_ADC_LSB: { base: uint, start: 0, end: 8 }
 TS_ADC1:
   type: register
   description: TS ADC High Byte
@@ -1027,7 +1027,7 @@ TS_ADC1:
   size_bits: 8
   reset_value: 0x00
   fields:
-    TS_ADC_MSB: {base: uint, start: 0, end: 8}
+    TS_ADC_MSB: { base: uint, start: 0, end: 8 }
 TS_ADC0:
   type: register
   description: TS ADC Low Byte
@@ -1035,7 +1035,7 @@ TS_ADC0:
   size_bits: 8
   reset_value: 0x00
   fields:
-    TS_ADC_LSB: {base: uint, start: 0, end: 8}
+    TS_ADC_LSB: { base: uint, start: 0, end: 8 }
 TDIE_ADC1:
   type: register
   description: TDIE ADC High Byte
@@ -1043,7 +1043,7 @@ TDIE_ADC1:
   size_bits: 8
   reset_value: 0x00
   fields:
-    TDIE_ADC_MSB: {base: uint, start: 0, end: 8}
+    TDIE_ADC_MSB: { base: uint, start: 0, end: 8 }
 TDIE_ADC0:
   type: register
   description: TDIE ADC Low Byte
@@ -1051,7 +1051,7 @@ TDIE_ADC0:
   size_bits: 8
   reset_value: 0x00
   fields:
-    TDIE_ADC_LSB: {base: uint, start: 0, end: 8}
+    TDIE_ADC_LSB: { base: uint, start: 0, end: 8 }
 PART_INFORMATION:
   type: register
   description: Part Information Register
@@ -1066,7 +1066,7 @@ PART_INFORMATION:
     PN:
       base: uint
       start: 3
-      end: 6
+      end: 7
       description: Part Number Identifier
       try_conversion:
         name: PN
@@ -1084,7 +1084,7 @@ VCELLBOT_ADC1:
   size_bits: 8
   reset_value: 0x00
   fields:
-    VCELLBOT_ADC_MSB: {base: uint, start: 0, end: 8}
+    VCELLBOT_ADC_MSB: { base: uint, start: 0, end: 8 }
 VCELLBOT_ADC0:
   type: register
   description: VCELLBOT ADC Low Byte
@@ -1092,7 +1092,7 @@ VCELLBOT_ADC0:
   size_bits: 8
   reset_value: 0x00
   fields:
-    VCELLBOT_ADC_LSB: {base: uint, start: 0, end: 8}
+    VCELLBOT_ADC_LSB: { base: uint, start: 0, end: 8 }
 CELL_BALANCE_CTRL_1:
   type: register
   description: Cell Balancing Control 1
@@ -1206,14 +1206,14 @@ CELL_BALANCE_STAT_CTRL:
   size_bits: 8
   reset_value: 0x81
   fields:
-    CB_CHG_DIS: {base: bool, start: 7}
-    CB_AUTO_EN: {base: bool, start: 6}
-    CB_STAT: {base: bool, start: 5}
-    HS_CV_STAT: {base: bool, start: 4}
-    LS_CV_STAT: {base: bool, start: 3}
-    HS_OV_STAT: {base: bool, start: 2}
-    LS_OV_STAT: {base: bool, start: 1}
-    CB_OC_STAT: {base: bool, start: 0}
+    CB_CHG_DIS: { base: bool, start: 7 }
+    CB_AUTO_EN: { base: bool, start: 6 }
+    CB_STAT: { base: bool, start: 5 }
+    HS_CV_STAT: { base: bool, start: 4 }
+    LS_CV_STAT: { base: bool, start: 3 }
+    HS_OV_STAT: { base: bool, start: 2 }
+    LS_OV_STAT: { base: bool, start: 1 }
+    CB_OC_STAT: { base: bool, start: 0 }
 CELL_BALANCE_FLAG:
   type: register
   description: Cell Balancing Flag
@@ -1221,14 +1221,14 @@ CELL_BALANCE_FLAG:
   size_bits: 8
   reset_value: 0x00
   fields:
-    QCBH_EN: {base: bool, start: 7}
-    QCBL_EN: {base: bool, start: 6}
-    CB_FLAG: {base: bool, start: 5}
-    HS_CV_FLAG: {base: bool, start: 4}
-    LS_CV_FLAG: {base: bool, start: 3}
-    HS_OV_FLAG: {base: bool, start: 2}
-    LS_OV_FLAG: {base: bool, start: 1}
-    CB_OC_FLAG: {base: bool, start: 0}
+    QCBH_EN: { base: bool, start: 7 }
+    QCBL_EN: { base: bool, start: 6 }
+    CB_FLAG: { base: bool, start: 5 }
+    HS_CV_FLAG: { base: bool, start: 4 }
+    LS_CV_FLAG: { base: bool, start: 3 }
+    HS_OV_FLAG: { base: bool, start: 2 }
+    LS_OV_FLAG: { base: bool, start: 1 }
+    CB_OC_FLAG: { base: bool, start: 0 }
 CELL_BALANCE_MASK:
   type: register
   description: Cell Balancing Mask
@@ -1236,9 +1236,9 @@ CELL_BALANCE_MASK:
   size_bits: 8
   reset_value: 0x00
   fields:
-    CB_MASK: {base: bool, start: 5}
-    HS_CV_MASK: {base: bool, start: 4}
-    LS_CV_MASK: {base: bool, start: 3}
-    HS_OV_MASK: {base: bool, start: 2}
-    LS_OV_MASK: {base: bool, start: 1}
-    CB_OC_MASK: {base: bool, start: 0}
+    CB_MASK: { base: bool, start: 5 }
+    HS_CV_MASK: { base: bool, start: 4 }
+    LS_CV_MASK: { base: bool, start: 3 }
+    HS_OV_MASK: { base: bool, start: 2 }
+    LS_OV_MASK: { base: bool, start: 1 }
+    CB_OC_MASK: { base: bool, start: 0 }

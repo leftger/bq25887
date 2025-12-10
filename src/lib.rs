@@ -36,6 +36,8 @@
 #![warn(missing_docs, rustdoc::broken_intra_doc_links)]
 #![doc(html_root_url = "https://docs.rs/bq25887")]
 
+use core::convert::TryFrom;
+
 use embedded_hal_async::i2c::I2c as I2cTrait;
 
 const BQ_ADDR: u8 = 0x6A;
@@ -53,6 +55,8 @@ mod generated {
 pub use generated::Bq25887;
 /// Enumeration of fast charge current limit selections.
 pub use generated::Ichg;
+/// Enumerated part number identifiers reported by the device.
+pub use generated::Pn;
 /// Generated register field definitions for the charger.
 pub use generated::field_sets;
 
@@ -112,6 +116,30 @@ impl<I2C: I2cTrait> device_driver::AsyncRegisterInterface for DeviceInterface<I2
 pub struct DeviceInterface<I2C: I2cTrait> {
     /// Async I²C peripheral used to communicate with the charger.
     pub i2c: I2C,
+}
+
+/// Summary of identifying information reported by register 0x25.
+#[cfg_attr(feature = "defmt-03", derive(defmt::Format))]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct PartInformationSummary {
+    /// Enumerated part number for the device.
+    pub part_number: Pn,
+    /// Raw device revision field (lower 4 bits of register 0x25).
+    pub device_revision: u8,
+    /// Indicates whether the `REG_RST` bit is asserted.
+    pub register_reset: bool,
+}
+
+impl TryFrom<crate::field_sets::PartInformation> for PartInformationSummary {
+    type Error = device_driver::ConversionError<u8>;
+
+    fn try_from(value: crate::field_sets::PartInformation) -> Result<Self, Self::Error> {
+        Ok(PartInformationSummary {
+            part_number: value.pn()?,
+            device_revision: value.dev_rev(),
+            register_reset: value.reg_rst(),
+        })
+    }
 }
 
 /// High-level async driver for the BQ25887 charger.
@@ -573,6 +601,13 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
         &mut self,
     ) -> Result<crate::field_sets::PartInformation, BQ25887Error<I2C::Error>> {
         self.device.part_information().read_async().await
+    }
+
+    /// Reads register 0x25 and returns parsed identification details.
+    pub async fn read_part_information_summary(&mut self) -> Result<PartInformationSummary, BQ25887Error<I2C::Error>> {
+        let reg = self.read_part_information().await?;
+        let summary = PartInformationSummary::try_from(reg).map_err(BQ25887Error::from)?;
+        Ok(summary)
     }
 
     /// ### Brief
