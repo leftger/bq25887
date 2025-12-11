@@ -40,7 +40,8 @@ use core::convert::TryFrom;
 
 use embedded_hal_async::i2c::I2c as I2cTrait;
 
-const BQ_ADDR: u8 = 0x6A;
+/// Default 7-bit I²C address for the BQ25887 charger.
+pub const DEFAULT_I2C_ADDRESS: u8 = 0x6A;
 const LARGEST_REG_SIZE_BYTES: usize = 0x01;
 
 #[allow(missing_docs)]
@@ -94,7 +95,7 @@ impl<I2C: I2cTrait> device_driver::AsyncRegisterInterface for DeviceInterface<I2
         buf[0] = address;
         buf[1..=data.len()].copy_from_slice(data);
         self.i2c
-            .write(BQ_ADDR, &buf[..=data.len()])
+            .write(self.address, &buf[..=data.len()])
             .await
             .map_err(BQ25887Error::I2c)
     }
@@ -106,7 +107,7 @@ impl<I2C: I2cTrait> device_driver::AsyncRegisterInterface for DeviceInterface<I2
         data: &mut [u8],
     ) -> Result<(), Self::Error> {
         self.i2c
-            .write_read(BQ_ADDR, &[address], data)
+            .write_read(self.address, &[address], data)
             .await
             .map_err(BQ25887Error::I2c)
     }
@@ -116,6 +117,13 @@ impl<I2C: I2cTrait> device_driver::AsyncRegisterInterface for DeviceInterface<I2
 pub struct DeviceInterface<I2C: I2cTrait> {
     /// Async I²C peripheral used to communicate with the charger.
     pub i2c: I2C,
+    address: u8,
+}
+
+impl<I2C: I2cTrait> DeviceInterface<I2C> {
+    pub(crate) fn new(i2c: I2C, address: u8) -> Self {
+        Self { i2c, address }
+    }
 }
 
 /// Summary of identifying information reported by register 0x25.
@@ -196,8 +204,13 @@ pub struct Bq25887Driver<I2C: I2cTrait> {
 impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     /// Creates a new driver from the provided async I²C peripheral.
     pub fn new(i2c: I2C) -> Self {
-        Bq25887Driver {
-            device: Bq25887::new(DeviceInterface { i2c }),
+        Self::new_with_address(i2c, DEFAULT_I2C_ADDRESS)
+    }
+
+    /// Creates a new driver from the provided async I²C peripheral and custom 7-bit I²C address.
+    pub fn new_with_address(i2c: I2C, address: u8) -> Self {
+        Self {
+            device: Bq25887::new(DeviceInterface::new(i2c, address)),
             config_cache: ConfigurationCache::default(),
             status_cache: StatusCache::default(),
             part_information_cache: None,
