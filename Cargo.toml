@@ -8,10 +8,13 @@ repository = "https://github.com/leftger/bq25887"
 license = "MIT OR Apache-2.0"
 include = [
 	"src/**/*.rs",
+	"examples/**/*.rs",
 	"build.rs",
 	"Cargo.toml",
 	"README.md",
 	"LICENSE*",
+	"memory.x",
+	".cargo/config.toml",
 	"src/bq25887.yaml",
 ]
 readme = "README.md"
@@ -22,7 +25,7 @@ categories = ["embedded", "hardware-support", "no-std"]
 device-driver = { version = "1.0.3", default-features = false, features = [
 	"yaml",
 ] }
-defmt = { version = "1.0.1", optional = true }
+defmt = { version = "0.3", optional = true }
 embassy-embedded-hal = { version = "0.5.0", optional = true }
 embassy-sync = { version = "0.7.2", optional = true }
 
@@ -38,6 +41,19 @@ syn = { version = "2.0.111", features = ["full"] }
 
 [dev-dependencies]
 futures = "0.3"
+static-cell = "2"
+
+[target.'cfg(not(target_os = "none"))'.dev-dependencies]
+embassy-executor = { version = "0.5.0", features = ["arch-std"] }
+
+[target.'cfg(target_os = "none")'.dev-dependencies]
+embassy-executor = { version = "0.5.0", features = ["arch-cortex-m", "integrated-timers"] }
+embassy-stm32 = { version = "0.1.0", features = ["stm32wba65ri", "time-driver-tim2", "unstable-pac"] }
+embassy-time = "0.3"
+panic-probe = { version = "0.3", features = ["print-defmt"] }
+cortex-m-rt = "0.7"
+
+defmt-rtt = "0.4"
 
 [lints.rust]
 unsafe_code = "deny"
