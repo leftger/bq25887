@@ -1,16 +1,17 @@
 #![no_std]
 #![no_main]
+#![allow(missing_docs)]
 
-use core::fmt::Debug;
-
-use bq25887::embassy::{SharedBus, new_driver_with_status_cache};
-use bq25887::{BQ25887Error, StatusCache};
+use bq25887::StatusCache;
+use bq25887::embassy::{SharedBus, SharedDriverError, new_driver_with_status_cache};
 use defmt::{info, warn};
 use embassy_executor::Spawner;
 use embassy_stm32::bind_interrupts;
-use embassy_stm32::config::Config;
-use embassy_stm32::i2c::{self, I2c, NoDma};
-use embassy_stm32::peripherals::{I2C1, PB8, PB9};
+use embassy_stm32::gpio::{Level, Output, Speed};
+use embassy_stm32::i2c::{self, I2c, Master};
+use embassy_stm32::mode::Async;
+use embassy_stm32::peripherals::I2C2;
+use embassy_stm32::time::Hertz;
 use embassy_sync::blocking_mutex::raw::ThreadModeRawMutex;
 use embassy_sync::mutex::Mutex;
 use embassy_time::Timer;
@@ -27,40 +28,63 @@ compile_error!("Enable the `defmt-03` feature to build this example.");
 compile_error!("Build this example for a bare-metal target (e.g. thumbv8m.main-none-eabihf).");
 
 bind_interrupts!(struct Irqs {
-    I2C1_EV => i2c::InterruptHandler<I2C1>;
-    I2C1_ER => i2c::InterruptHandler<I2C1>;
+    I2C2_EV => i2c::EventInterruptHandler<I2C2>;
+    I2C2_ER => i2c::ErrorInterruptHandler<I2C2>;
 });
 
-type BusMutex = SharedBus<ThreadModeRawMutex, I2c<'static, I2C1, NoDma, NoDma>>;
+type BusMutex = SharedBus<ThreadModeRawMutex, I2c<'static, Async, Master>>;
+type DriverError = SharedDriverError<I2c<'static, Async, Master>>;
 
 static BUS: StaticCell<BusMutex> = StaticCell::new();
 
 #[embassy_executor::main]
 async fn main(spawner: Spawner) -> ! {
-    let mut cfg = Config::default();
-    cfg.rcc.hsi = true;
-    cfg.rcc.sys_ck = Some(embassy_stm32::time::mhz(96));
+    let mut config = embassy_stm32::Config::default();
 
-    let peripherals = embassy_stm32::init(cfg);
+    {
+        use embassy_stm32::rcc::*;
+        config.rcc.pll1 = Some(Pll {
+            source: PllSource::HSI,
+            prediv: PllPreDiv::DIV1,  // PLLM = 1  → HSI / 1 = 16 MHz
+            mul: PllMul::MUL25,       // PLLN = 25 → 16 MHz * 25 = 400 MHz VCO
+            divr: Some(PllDiv::DIV4), // PLLR = 4  → 100 MHz (Sysclk)
+            divq: Some(PllDiv::DIV8), // PLLQ = 8  → 50 MHz
+            // divp: Some(PllDiv::DIV25), // PLLP = 25 → 16 MHz (USB_OTG_HS)
+            divp: None,
+            frac: Some(0), // Fractional part (disabled)
+        });
+
+        config.rcc.hse = Some(Hse {
+            prescaler: HsePrescaler::DIV1,
+        });
+
+        config.rcc.voltage_scale = VoltageScale::RANGE1;
+        config.rcc.mux.otghssel = mux::Otghssel::HSE;
+        config.rcc.mux.sai1sel = mux::Sai1sel::PLL1_Q;
+        config.rcc.sys = Sysclk::PLL1_R;
+
+        config.rcc.ahb_pre = AHBPrescaler::DIV1;
+        config.rcc.apb1_pre = APBPrescaler::DIV1;
+        config.rcc.apb2_pre = APBPrescaler::DIV1;
+        config.rcc.apb7_pre = APBPrescaler::DIV1;
+        config.rcc.ahb5_pre = AHB5Prescaler::DIV4;
+    }
+
+    let p = embassy_stm32::init(config);
 
     let mut i2c_cfg = i2c::Config::default();
-    i2c_cfg.frequency = 400_000;
+    i2c_cfg.frequency = Hertz(400_000);
+    i2c_cfg.gpio_speed = Speed::VeryHigh;
+    i2c_cfg.scl_pullup = false;
+    i2c_cfg.sda_pullup = false;
 
-    let i2c = I2c::new(
-        peripherals.I2C1,
-        peripherals.PB8,
-        peripherals.PB9,
-        Irqs,
-        NoDma,
-        NoDma,
-        i2c_cfg,
-    );
+    let i2c = I2c::new(p.I2C2, p.PB10, p.PB11, Irqs, p.GPDMA1_CH0, p.GPDMA1_CH1, i2c_cfg);
 
     let bus = BUS.init(Mutex::new(i2c));
 
-    spawner.spawn(charger_monitor_task(bus)).unwrap();
-    spawner.spawn(telemetry_task(bus)).unwrap();
-    spawner.spawn(control_task(bus)).unwrap();
+    spawner.spawn(charger_monitor_task(bus).expect("spawn charger_monitor_task"));
+    spawner.spawn(telemetry_task(bus).expect("spawn telemetry_task"));
+    spawner.spawn(control_task(bus).expect("spawn control_task"));
 
     loop {
         Timer::after_secs(1).await;
@@ -78,10 +102,11 @@ async fn charger_monitor_task(bus: &'static BusMutex) {
 
             if let Some(status) = driver.status_cache().charger_status_1 {
                 info!(
-                    "[monitor] CHRG_STAT={} VSYS_STAT={} WATCHDOG={}",
-                    status.chrg_stat(),
-                    status.vsys_stat(),
-                    status.watchdog_fault()
+                    "[monitor] CHRG_STAT={:?} WD={} VINDPM={} IINDPM={}",
+                    defmt::Debug2Format(&status.chrg_stat()),
+                    status.wd_stat(),
+                    status.vindpm_stat(),
+                    status.iindpm_stat()
                 );
             } else {
                 warn!("[monitor] charger_status_1 cache empty");
@@ -110,10 +135,10 @@ async fn control_task(bus: &'static BusMutex) {
                 return;
             }
 
-            info!("[control] Raising charge-current limit by one step");
+            info!("[control] Ensuring EN_HIZ remains cleared");
             if let Some(mut cached) = driver.configuration_cache().charge_current_limit {
-                let updated = cached.with_ichg(cached.ichg().saturating_add(1));
-                if let Err(err) = driver.write_charge_current_limit(updated).await {
+                cached.set_en_hiz(false);
+                if let Err(err) = driver.write_charge_current_limit(cached).await {
                     log_error("write_charge_current_limit", err);
                 }
             } else {
@@ -128,7 +153,7 @@ async fn control_task(bus: &'static BusMutex) {
     }
 }
 
-async fn collect_snapshot(bus: &'static BusMutex) -> Result<StatusCache, BQ25887Error<i2c::Error>> {
+async fn collect_snapshot(bus: &'static BusMutex) -> Result<StatusCache, DriverError> {
     let mut driver = new_driver_with_status_cache(bus).await?;
     driver.refresh_status_register_cache().await?;
     Ok(*driver.status_cache())
@@ -139,9 +164,11 @@ fn pretty_print_snapshot(snapshot: StatusCache) {
 
     if let Some(status) = snapshot.charger_status_1 {
         info!(
-            "  ChargerStatus1: CHRG_STAT={} VSYS_STAT={}",
-            status.chrg_stat(),
-            status.vsys_stat()
+            "  ChargerStatus1: CHRG_STAT={:?} WD={} VINDPM={} IINDPM={}",
+            defmt::Debug2Format(&status.chrg_stat()),
+            status.wd_stat(),
+            status.vindpm_stat(),
+            status.iindpm_stat()
         );
     } else {
         warn!("  ChargerStatus1: <missing>");
@@ -149,10 +176,10 @@ fn pretty_print_snapshot(snapshot: StatusCache) {
 
     if let Some(faults) = snapshot.fault_status {
         info!(
-            "  FaultStatus: INPUT={} THERMAL={} TIMER={}",
-            faults.input_fault(),
-            faults.thermal_shutdown(),
-            faults.safety_timer_expired()
+            "  FaultStatus: VBUS_OVP={} TSHUT={} TIMER={}",
+            faults.vbus_ovp_stat(),
+            faults.tshut_stat(),
+            faults.tmr_stat()
         );
     } else {
         warn!("  FaultStatus: <missing>");
@@ -161,14 +188,6 @@ fn pretty_print_snapshot(snapshot: StatusCache) {
     info!("------------------------------------------");
 }
 
-fn log_error(label: &str, err: BQ25887Error<i2c::Error>) {
-    warn!("[error] {}: {:?}", label, Debug2Format(err));
-}
-
-struct Debug2Format<T>(T);
-
-impl<T: Debug> defmt::Format for Debug2Format<T> {
-    fn format(&self, fmt: defmt::Formatter) {
-        defmt::write!(fmt, "{:?}", self.0);
-    }
+fn log_error(label: &str, err: DriverError) {
+    warn!("[error] {}: {:?}", label, defmt::Debug2Format(&err));
 }
