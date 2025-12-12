@@ -81,10 +81,13 @@ async fn main(spawner: Spawner) -> ! {
     let i2c = I2c::new(p.I2C2, p.PB10, p.PB11, Irqs, p.GPDMA1_CH0, p.GPDMA1_CH1, i2c_cfg);
 
     let bus = BUS.init(Mutex::new(i2c));
+    let _power_on = Output::new(p.PB2, Level::High, Speed::Low);
 
-    spawner.spawn(charger_monitor_task(bus).expect("spawn charger_monitor_task"));
-    spawner.spawn(telemetry_task(bus).expect("spawn telemetry_task"));
-    spawner.spawn(control_task(bus).expect("spawn control_task"));
+    spawner
+        .spawn(charger_monitor_task(bus))
+        .expect("spawn charger_monitor_task");
+    spawner.spawn(telemetry_task(bus)).expect("spawn telemetry_task");
+    spawner.spawn(control_task(bus)).expect("spawn control_task");
 
     loop {
         Timer::after_secs(1).await;

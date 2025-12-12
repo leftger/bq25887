@@ -186,9 +186,11 @@ mod demo {
     }
 
     pub async fn run(spawner: Spawner) {
-        spawner.spawn(charger_monitor_task(&BUS).expect("spawn charger_monitor_task"));
-        spawner.spawn(telemetry_task(&BUS).expect("spawn telemetry_task"));
-        spawner.spawn(control_task(&BUS).expect("spawn control_task"));
+        spawner
+            .spawn(charger_monitor_task(&BUS))
+            .expect("spawn charger_monitor_task");
+        spawner.spawn(telemetry_task(&BUS)).expect("spawn telemetry_task");
+        spawner.spawn(control_task(&BUS)).expect("spawn control_task");
 
         pending::<()>().await;
     }
