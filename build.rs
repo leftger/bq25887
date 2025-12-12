@@ -8,9 +8,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("cargo:rerun-if-changed=build.rs");
     println!("cargo:rerun-if-changed=link.x");
     println!("cargo:rerun-if-changed=src/bq25887.yaml");
-    println!("cargo:rustc-link-arg=-Tlink.x");
-    println!("cargo:rustc-link-arg=-Tdefmt.x");
-    println!("cargo:rustc-link-arg=--nmagic");
+
+    let target = env::var("TARGET").unwrap_or_default();
+    if target == "thumbv8m.main-none-eabihf" {
+        println!("cargo:rustc-link-arg=-Tlink.x");
+        println!("cargo:rustc-link-arg=-Tdefmt.x");
+        println!("cargo:rustc-link-arg=--nmagic");
+    }
 
     let manifest_dir = PathBuf::from(env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR must be set"));
     let manifest_path = manifest_dir.join("src/bq25887.yaml");

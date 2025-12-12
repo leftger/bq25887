@@ -1,4 +1,5 @@
 #![allow(clippy::print_stdout)]
+#![allow(missing_docs)]
 
 #[cfg(feature = "embassy")]
 mod demo {

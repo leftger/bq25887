@@ -21,6 +21,7 @@ readme = "README.md"
 keywords = ["battery", "charger", "embedded", "i2c", "power-management"]
 categories = ["embedded", "hardware-support", "no-std"]
 
+
 [dependencies]
 device-driver = { version = "1.0.3", default-features = false, features = ["yaml"] }
 defmt = { version = "0.3", optional = true, default-features = false }
@@ -90,3 +91,11 @@ embassy = [
 ]
 
 log = ["dep:log"]
+
+[[example]]
+name = "embassy_stm32wba"
+required-features = ["embassy", "defmt-03"]
+
+[[example]]
+name = "embassy"
+required-features = ["embassy"]

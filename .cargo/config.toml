@@ -1,8 +1,10 @@
 [target.thumbv8m.main-none-eabihf]
 runner = "probe-rs run --chip STM32WBA65RI"
 
-[build]
-target = "thumbv8m.main-none-eabihf"
+
 
 [env]
 DEFMT_LOG = "info"
+
+[doc]
+rustdocflags = ["-C", "panic=abort"]

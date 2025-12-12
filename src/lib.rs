@@ -12,18 +12,40 @@
 //! Create a driver with an async I²C peripheral and read the charger status:
 //!
 //! ```no_run
+//! #![cfg_attr(target_os = "none", no_std)]
+//! #![cfg_attr(target_os = "none", no_main)]
+//!
+//! #[cfg(target_os = "none")]
 //! use bq25887::Bq25887Driver;
 //!
-//! async fn inspect<I2C>(i2c: I2C) -> Result<(), bq25887::BQ25887Error<I2C::Error>>
+//! #[cfg(target_os = "none")]
+//! async fn inspect<I2C>(
+//!     i2c: I2C,
+//! ) -> core::result::Result<(), bq25887::BQ25887Error<I2C::Error>>
 //! where
 //!     I2C: embedded_hal_async::i2c::I2c,
 //! {
 //!     let mut driver = Bq25887Driver::new(i2c);
 //!     let status = driver.read_charger_status_1().await?;
-//!     // Evaluate charger status or update application state here.
 //!     let _ = status;
 //!     Ok(())
 //! }
+//!
+//! #[cfg(not(target_os = "none"))]
+//! fn main() {}
+//!
+//! # #[cfg(target_os = "none")]
+//! # use core::panic::PanicInfo;
+//! # #[cfg(target_os = "none")]
+//! # #[panic_handler]
+//! # fn panic(_info: &PanicInfo) -> ! {
+//! #     loop {}
+//! # }
+//! # #[cfg(target_os = "none")]
+//! # #[unsafe(export_name = "_start")]
+//! # extern "C" fn start() -> ! {
+//! #     loop {}
+//! # }
 //! ```
 //!
 //! For a deeper tour of the API and hardware integration tips, see the project
@@ -37,6 +59,7 @@
 #![doc(html_root_url = "https://docs.rs/bq25887")]
 
 use core::convert::TryFrom;
+use core::result::Result;
 
 use embedded_hal_async::i2c::I2c as I2cTrait;
 

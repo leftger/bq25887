@@ -1,3 +1,4 @@
+#![cfg(not(target_os = "none"))]
 #![allow(missing_docs)]
 
 use core::cmp::min;
