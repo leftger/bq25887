@@ -1,6 +1,6 @@
 [package]
 name = "bq25887"
-version = "0.1.0"
+version = "0.1.1"
 description = "Device driver for the Texas Instruments BQ25887 linear battery chargers."
 edition = "2024"
 authors = ["Gerzain Mata <leftger@gmail.com>", "Tavish Srivastava <tavishsrivastava87@gmail.com>"]
@@ -25,8 +25,8 @@ categories = ["embedded", "hardware-support", "no-std"]
 device-driver = { version = "1.0.3", default-features = false, features = ["yaml"] }
 defmt = { version = "0.3", optional = true, default-features = false }
 cortex-m = { version = "0.7", optional = true, features = ["critical-section-single-core"] }
-embassy-embedded-hal = { git = "https://github.com/embassy-rs/embassy", default-features = false, optional = true }
-embassy-sync = { git = "https://github.com/embassy-rs/embassy", optional = true }
+embassy-embedded-hal = { version = "0.5.0", default-features = false, optional = true }
+embassy-sync = { version = "0.7.2", optional = true }
 embedded-hal-async = "1.0.0"
 log = { version = "0.4.22", optional = true }
 
@@ -40,16 +40,16 @@ syn = { version = "2.0.111", features = ["full"] }
 static_cell = "2"
 
 [target.'cfg(not(target_os = "none"))'.dev-dependencies]
-embassy-executor = { git = "https://github.com/embassy-rs/embassy", features = ["arch-std"] }
+embassy-executor = { version = "0.9.1", features = ["arch-std"] }
 futures = "0.3"
 
 [target.'cfg(target_os = "none")'.dev-dependencies]
-embassy-executor = { git = "https://github.com/embassy-rs/embassy", features = [
+embassy-executor = { version = "0.9.1", features = [
     "arch-cortex-m",
     "executor-thread",
 ] }
-embassy-futures = { git = "https://github.com/embassy-rs/embassy" }
-embassy-stm32 = { git = "https://github.com/embassy-rs/embassy", features = [
+embassy-futures = { version = "0.1.2" }
+embassy-stm32 = { version = "0.4.0", features = [
     "stm32wba65ri",
     "time-driver-any",
     "exti",
@@ -57,9 +57,9 @@ embassy-stm32 = { git = "https://github.com/embassy-rs/embassy", features = [
     "low-power",
     "defmt",
 ] }
-embassy-sync = { git = "https://github.com/embassy-rs/embassy" }
-embassy-time = { git = "https://github.com/embassy-rs/embassy", features = ["tick-hz-32_768", "defmt-timestamp-uptime"] }
-embassy-embedded-hal = { git = "https://github.com/embassy-rs/embassy", default-features = false }
+embassy-sync = { version = "0.7.2" }
+embassy-time = { version = "0.5.0", features = ["tick-hz-32_768", "defmt-timestamp-uptime"] }
+embassy-embedded-hal = { version = "0.5.0", default-features = false }
 panic-probe = { version = "0.3", features = ["print-defmt"] }
 cortex-m-rt = "0.7"
 defmt-rtt = "0.4"
