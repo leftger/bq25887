@@ -81,6 +81,8 @@ pub use generated::Bq25887;
 pub use generated::Ichg;
 /// Enumerated part number identifiers reported by the device.
 pub use generated::Pn;
+/// ADC conversion rate mode selection.
+pub use generated::AdcRate;
 /// Generated register field definitions for the charger.
 pub use generated::field_sets;
 
@@ -170,58 +172,9 @@ impl TryFrom<crate::field_sets::PartInformation> for PartInformationSummary {
     }
 }
 
-/// Cached configuration register values for addresses 0x00 through 0x06.
-#[cfg_attr(feature = "defmt-03", derive(defmt::Format))]
-#[derive(Debug, Clone, Copy, Default)]
-pub struct ConfigurationCache {
-    /// Cached value of register 0x00 (`CellVoltageLimit`) if observed.
-    pub cell_voltage_limit: Option<crate::field_sets::CellVoltageLimit>,
-    /// Cached value of register 0x01 (`ChargeCurrentLimit`) if observed.
-    pub charge_current_limit: Option<crate::field_sets::ChargeCurrentLimit>,
-    /// Cached value of register 0x02 (`InputVoltageLimit`) if observed.
-    pub input_voltage_limit: Option<crate::field_sets::InputVoltageLimit>,
-    /// Cached value of register 0x03 (`InputCurrentLimit`) if observed.
-    pub input_current_limit: Option<crate::field_sets::InputCurrentLimit>,
-    /// Cached value of register 0x04 (`PrechgTerminationCtrl`) if observed.
-    pub precharge_termination_control: Option<crate::field_sets::PrechgTerminationCtrl>,
-    /// Cached value of register 0x05 (`ChargerCtrl1`) if observed.
-    pub charger_control_1: Option<crate::field_sets::ChargerCtrl1>,
-    /// Cached value of register 0x06 (`ChargerCtrl2`) if observed.
-    pub charger_control_2: Option<crate::field_sets::ChargerCtrl2>,
-}
-
-/// Cached status and fault register values observed by the driver.
-#[cfg_attr(feature = "defmt-03", derive(defmt::Format))]
-#[derive(Debug, Clone, Copy, Default)]
-pub struct StatusCache {
-    /// Cached value of register 0x0B (`ChargerStatus1`) if observed.
-    pub charger_status_1: Option<crate::field_sets::ChargerStatus1>,
-    /// Cached value of register 0x0C (`ChargerStatus2`) if observed.
-    pub charger_status_2: Option<crate::field_sets::ChargerStatus2>,
-    /// Cached value of register 0x0D (`NtcStatus`) if observed.
-    pub ntc_status: Option<crate::field_sets::NtcStatus>,
-    /// Cached value of register 0x0E (`FaultStatus`) if observed.
-    pub fault_status: Option<crate::field_sets::FaultStatus>,
-    /// Cached value of register 0x0F (`ChargerFlag1`) if observed.
-    pub charger_flag_1: Option<crate::field_sets::ChargerFlag1>,
-    /// Cached value of register 0x10 (`ChargerFlag2`) if observed.
-    pub charger_flag_2: Option<crate::field_sets::ChargerFlag2>,
-    /// Cached value of register 0x11 (`FaultFlag`) if observed.
-    pub fault_flag: Option<crate::field_sets::FaultFlag>,
-    /// Cached value of register 0x12 (`ChargerMask1`) if observed.
-    pub charger_mask_1: Option<crate::field_sets::ChargerMask1>,
-    /// Cached value of register 0x13 (`ChargerMask2`) if observed.
-    pub charger_mask_2: Option<crate::field_sets::ChargerMask2>,
-    /// Cached value of register 0x14 (`FaultMask`) if observed.
-    pub fault_mask: Option<crate::field_sets::FaultMask>,
-}
-
 /// High-level async driver for the BQ25887 charger.
 pub struct Bq25887Driver<I2C: I2cTrait> {
     device: Bq25887<DeviceInterface<I2C>>,
-    config_cache: ConfigurationCache,
-    status_cache: StatusCache,
-    part_information_cache: Option<PartInformationSummary>,
 }
 
 impl<I2C: I2cTrait> Bq25887Driver<I2C> {
@@ -234,70 +187,7 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     pub fn new_with_address(i2c: I2C, address: u8) -> Self {
         Self {
             device: Bq25887::new(DeviceInterface::new(i2c, address)),
-            config_cache: ConfigurationCache::default(),
-            status_cache: StatusCache::default(),
-            part_information_cache: None,
         }
-    }
-
-    /// Returns the cached configuration register values observed by the driver.
-    pub fn configuration_cache(&self) -> &ConfigurationCache {
-        &self.config_cache
-    }
-
-    /// Returns the cached status and fault register values observed by the driver.
-    pub fn status_cache(&self) -> &StatusCache {
-        &self.status_cache
-    }
-
-    /// Refreshes the cached configuration registers (0x00 through 0x06) by issuing reads to the device.
-    ///
-    /// # Errors
-    /// Returns an error if any I²C transaction fails or if a register value cannot be parsed.
-    pub async fn refresh_configuration_cache(&mut self) -> Result<(), BQ25887Error<I2C::Error>> {
-        let voltage_limit = self.device.cell_voltage_limit().read_async().await?;
-        self.config_cache.cell_voltage_limit = Some(voltage_limit);
-        let charge_current_limit = self.device.charge_current_limit().read_async().await?;
-        self.config_cache.charge_current_limit = Some(charge_current_limit);
-        let input_voltage_limit = self.device.input_voltage_limit().read_async().await?;
-        self.config_cache.input_voltage_limit = Some(input_voltage_limit);
-        let input_current_limit = self.device.input_current_limit().read_async().await?;
-        self.config_cache.input_current_limit = Some(input_current_limit);
-        let prechg_term_ctrl = self.device.prechg_termination_ctrl().read_async().await?;
-        self.config_cache.precharge_termination_control = Some(prechg_term_ctrl);
-        let charger_control_1 = self.device.charger_ctrl_1().read_async().await?;
-        self.config_cache.charger_control_1 = Some(charger_control_1);
-        let charger_control_2 = self.device.charger_ctrl_2().read_async().await?;
-        self.config_cache.charger_control_2 = Some(charger_control_2);
-        Ok(())
-    }
-
-    /// Refreshes the cached status and fault registers (0x0B through 0x14) by issuing reads to the device.
-    ///
-    /// # Errors
-    /// Returns an error if any I²C transaction fails or if a register value cannot be parsed.
-    pub async fn refresh_status_register_cache(&mut self) -> Result<(), BQ25887Error<I2C::Error>> {
-        let charger_status_1 = self.device.charger_status_1().read_async().await?;
-        self.status_cache.charger_status_1 = Some(charger_status_1);
-        let charger_status_2 = self.device.charger_status_2().read_async().await?;
-        self.status_cache.charger_status_2 = Some(charger_status_2);
-        let ntc_status = self.device.ntc_status().read_async().await?;
-        self.status_cache.ntc_status = Some(ntc_status);
-        let fault_status = self.device.fault_status().read_async().await?;
-        self.status_cache.fault_status = Some(fault_status);
-        let charger_flag_1 = self.device.charger_flag_1().read_async().await?;
-        self.status_cache.charger_flag_1 = Some(charger_flag_1);
-        let charger_flag_2 = self.device.charger_flag_2().read_async().await?;
-        self.status_cache.charger_flag_2 = Some(charger_flag_2);
-        let fault_flag = self.device.fault_flag().read_async().await?;
-        self.status_cache.fault_flag = Some(fault_flag);
-        let charger_mask_1 = self.device.charger_mask_1().read_async().await?;
-        self.status_cache.charger_mask_1 = Some(charger_mask_1);
-        let charger_mask_2 = self.device.charger_mask_2().read_async().await?;
-        self.status_cache.charger_mask_2 = Some(charger_mask_2);
-        let fault_mask = self.device.fault_mask().read_async().await?;
-        self.status_cache.fault_mask = Some(fault_mask);
-        Ok(())
     }
 
     /// Reads the cell voltage regulation limit register (0x00, reset = 0xA0).
@@ -308,9 +198,7 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     pub async fn read_voltage_regulation_limit(
         &mut self,
     ) -> Result<crate::field_sets::CellVoltageLimit, BQ25887Error<I2C::Error>> {
-        let value = self.device.cell_voltage_limit().read_async().await?;
-        self.config_cache.cell_voltage_limit = Some(value);
-        Ok(value)
+        self.device.cell_voltage_limit().read_async().await
     }
 
     /// Writes `CellVoltageLimit` to the cell voltage regulation limit register (0x00, reset = 0xA0).
@@ -325,9 +213,7 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
         self.device
             .cell_voltage_limit()
             .write_async(|reg| *reg = volt_limit)
-            .await?;
-        self.config_cache.cell_voltage_limit = Some(volt_limit);
-        Ok(())
+            .await
     }
 
     /// Reads the charger current limit register (0x01, reset = 0x5E).
@@ -338,9 +224,7 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     pub async fn read_charge_current_limit(
         &mut self,
     ) -> Result<crate::field_sets::ChargeCurrentLimit, BQ25887Error<I2C::Error>> {
-        let value = self.device.charge_current_limit().read_async().await?;
-        self.config_cache.charge_current_limit = Some(value);
-        Ok(value)
+        self.device.charge_current_limit().read_async().await
     }
 
     /// Writes to the charger current limit register (0x01, reset = 0x5E).
@@ -355,30 +239,21 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
         self.device
             .charge_current_limit()
             .write_async(|reg| *reg = current_limit)
-            .await?;
-        self.config_cache.charge_current_limit = Some(current_limit);
-        Ok(())
+            .await
     }
 
     /// Enables or disables the battery connection by updating `EN_HIZ` in register 0x01.
     ///
     /// When `setting` is `true`, the battery connection is enabled (`EN_HIZ` cleared).
     /// When `setting` is `false`, the charger enters high-impedance mode (`EN_HIZ` set).
-    /// The method reuses the cached register value when available to minimize I²C traffic.
     ///
     /// # Errors
     ///
     /// Returns [`BQ25887Error::I2c`] if the underlying read or write of register 0x01 fails, or [`BQ25887Error::Conversion`] if the freshly read register image cannot be parsed.
     pub async fn enable_battery_connection(&mut self, setting: bool) -> Result<(), BQ25887Error<I2C::Error>> {
-        let mut reg = if let Some(cached) = self.config_cache.charge_current_limit {
-            cached
-        } else {
-            self.device.charge_current_limit().read_async().await?
-        };
+        let mut reg = self.device.charge_current_limit().read_async().await?;
         reg.set_en_hiz(!setting);
-        self.device.charge_current_limit().write_async(|w| *w = reg).await?;
-        self.config_cache.charge_current_limit = Some(reg);
-        Ok(())
+        self.device.charge_current_limit().write_async(|w| *w = reg).await
     }
 
     /// Reads the input voltage limit register (0x02, reset = 0x84).
@@ -389,9 +264,7 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     pub async fn read_input_voltage_limit(
         &mut self,
     ) -> Result<crate::field_sets::InputVoltageLimit, BQ25887Error<I2C::Error>> {
-        let value = self.device.input_voltage_limit().read_async().await?;
-        self.config_cache.input_voltage_limit = Some(value);
-        Ok(value)
+        self.device.input_voltage_limit().read_async().await
     }
 
     /// Writes `InputVoltageLimit` to the input voltage limit register (0x02, reset = 0x84).
@@ -406,9 +279,7 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
         self.device
             .input_voltage_limit()
             .write_async(|reg| *reg = input_volt_limit)
-            .await?;
-        self.config_cache.input_voltage_limit = Some(input_volt_limit);
-        Ok(())
+            .await
     }
 
     /// Reads the input current limit register (0x03, reset = 0x39).
@@ -419,9 +290,7 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     pub async fn read_input_current_limit(
         &mut self,
     ) -> Result<crate::field_sets::InputCurrentLimit, BQ25887Error<I2C::Error>> {
-        let value = self.device.input_current_limit().read_async().await?;
-        self.config_cache.input_current_limit = Some(value);
-        Ok(value)
+        self.device.input_current_limit().read_async().await
     }
 
     /// Writes `InputCurrentLimit` to the input current limit register (0x03, reset = 0x39).
@@ -436,9 +305,7 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
         self.device
             .input_current_limit()
             .write_async(|reg| *reg = current_limit)
-            .await?;
-        self.config_cache.input_current_limit = Some(current_limit);
-        Ok(())
+            .await
     }
 
     /// Reads the precharge and termination current limit register (0x04, reset = 0x22).
@@ -449,9 +316,7 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     pub async fn read_precharge_and_termination_current_limit(
         &mut self,
     ) -> Result<crate::field_sets::PrechgTerminationCtrl, BQ25887Error<I2C::Error>> {
-        let value = self.device.prechg_termination_ctrl().read_async().await?;
-        self.config_cache.precharge_termination_control = Some(value);
-        Ok(value)
+        self.device.prechg_termination_ctrl().read_async().await
     }
 
     /// Writes `PrechgTerminationCtrl` to the precharge and termination current limit register (0x04, reset = 0x22).
@@ -466,9 +331,7 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
         self.device
             .prechg_termination_ctrl()
             .write_async(|reg| *reg = current_limit)
-            .await?;
-        self.config_cache.precharge_termination_control = Some(current_limit);
-        Ok(())
+            .await
     }
 
     /// Reads the charger control 1 register (0x05, reset = 0x9D).
@@ -479,9 +342,7 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     pub async fn read_charger_control_1(
         &mut self,
     ) -> Result<crate::field_sets::ChargerCtrl1, BQ25887Error<I2C::Error>> {
-        let value = self.device.charger_ctrl_1().read_async().await?;
-        self.config_cache.charger_control_1 = Some(value);
-        Ok(value)
+        self.device.charger_ctrl_1().read_async().await
     }
 
     /// Writes `ChargerCtrl1` to the charger control 1 register (0x05, reset = 0x9D).
@@ -493,9 +354,7 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
         &mut self,
         control: crate::field_sets::ChargerCtrl1,
     ) -> Result<(), BQ25887Error<I2C::Error>> {
-        self.device.charger_ctrl_1().write_async(|reg| *reg = control).await?;
-        self.config_cache.charger_control_1 = Some(control);
-        Ok(())
+        self.device.charger_ctrl_1().write_async(|reg| *reg = control).await
     }
 
     /// Reads the charger control 2 register (0x06, reset = 0x7D).
@@ -506,9 +365,7 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     pub async fn read_charger_control_2(
         &mut self,
     ) -> Result<crate::field_sets::ChargerCtrl2, BQ25887Error<I2C::Error>> {
-        let value = self.device.charger_ctrl_2().read_async().await?;
-        self.config_cache.charger_control_2 = Some(value);
-        Ok(value)
+        self.device.charger_ctrl_2().read_async().await
     }
 
     /// Writes `ChargerCtrl2` to the charger control 2 register (0x06, reset = 0x7D).
@@ -520,9 +377,7 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
         &mut self,
         control: crate::field_sets::ChargerCtrl2,
     ) -> Result<(), BQ25887Error<I2C::Error>> {
-        self.device.charger_ctrl_2().write_async(|reg| *reg = control).await?;
-        self.config_cache.charger_control_2 = Some(control);
-        Ok(())
+        self.device.charger_ctrl_2().write_async(|reg| *reg = control).await
     }
 
     /// Reads the charger control 3 register (0x07, reset = 0x00).
@@ -590,12 +445,7 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     pub async fn read_charger_status_1(
         &mut self,
     ) -> Result<crate::field_sets::ChargerStatus1, BQ25887Error<I2C::Error>> {
-        if let Some(cached) = self.status_cache.charger_status_1 {
-            return Ok(cached);
-        }
-        let value = self.device.charger_status_1().read_async().await?;
-        self.status_cache.charger_status_1 = Some(value);
-        Ok(value)
+        self.device.charger_status_1().read_async().await
     }
 
     /// Reads the charger status 2 register (0x0C).
@@ -606,12 +456,7 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     pub async fn read_charger_status_2(
         &mut self,
     ) -> Result<crate::field_sets::ChargerStatus2, BQ25887Error<I2C::Error>> {
-        if let Some(cached) = self.status_cache.charger_status_2 {
-            return Ok(cached);
-        }
-        let value = self.device.charger_status_2().read_async().await?;
-        self.status_cache.charger_status_2 = Some(value);
-        Ok(value)
+        self.device.charger_status_2().read_async().await
     }
 
     /// Reads the NTC status register (0x0D).
@@ -620,12 +465,7 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     ///
     /// Returns an error if the I²C transaction fails.
     pub async fn read_ntc_status(&mut self) -> Result<crate::field_sets::NtcStatus, BQ25887Error<I2C::Error>> {
-        if let Some(cached) = self.status_cache.ntc_status {
-            return Ok(cached);
-        }
-        let value = self.device.ntc_status().read_async().await?;
-        self.status_cache.ntc_status = Some(value);
-        Ok(value)
+        self.device.ntc_status().read_async().await
     }
 
     /// Reads the fault status register (0x0E).
@@ -634,12 +474,7 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     ///
     /// Returns an error if the I²C transaction fails.
     pub async fn read_fault_status(&mut self) -> Result<crate::field_sets::FaultStatus, BQ25887Error<I2C::Error>> {
-        if let Some(cached) = self.status_cache.fault_status {
-            return Ok(cached);
-        }
-        let value = self.device.fault_status().read_async().await?;
-        self.status_cache.fault_status = Some(value);
-        Ok(value)
+        self.device.fault_status().read_async().await
     }
 
     /// Reads the charger flag 1 register (0x0F).
@@ -648,12 +483,7 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     ///
     /// Returns an error if the I²C transaction fails.
     pub async fn read_charger_flag_1(&mut self) -> Result<crate::field_sets::ChargerFlag1, BQ25887Error<I2C::Error>> {
-        if let Some(cached) = self.status_cache.charger_flag_1 {
-            return Ok(cached);
-        }
-        let value = self.device.charger_flag_1().read_async().await?;
-        self.status_cache.charger_flag_1 = Some(value);
-        Ok(value)
+        self.device.charger_flag_1().read_async().await
     }
 
     /// Reads the charger flag 2 register (0x10).
@@ -662,12 +492,7 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     ///
     /// Returns an error if the I²C transaction fails.
     pub async fn read_charger_flag_2(&mut self) -> Result<crate::field_sets::ChargerFlag2, BQ25887Error<I2C::Error>> {
-        if let Some(cached) = self.status_cache.charger_flag_2 {
-            return Ok(cached);
-        }
-        let value = self.device.charger_flag_2().read_async().await?;
-        self.status_cache.charger_flag_2 = Some(value);
-        Ok(value)
+        self.device.charger_flag_2().read_async().await
     }
 
     /// Reads the fault flag register (0x11).
@@ -676,12 +501,7 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     ///
     /// Returns an error if the I²C transaction fails.
     pub async fn read_fault_flag(&mut self) -> Result<crate::field_sets::FaultFlag, BQ25887Error<I2C::Error>> {
-        if let Some(cached) = self.status_cache.fault_flag {
-            return Ok(cached);
-        }
-        let value = self.device.fault_flag().read_async().await?;
-        self.status_cache.fault_flag = Some(value);
-        Ok(value)
+        self.device.fault_flag().read_async().await
     }
 
     /// Reads the charger mask 1 register (0x12, reset = 0x00).
@@ -690,12 +510,7 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     ///
     /// Returns an error if the I²C transaction fails.
     pub async fn read_charger_mask_1(&mut self) -> Result<crate::field_sets::ChargerMask1, BQ25887Error<I2C::Error>> {
-        if let Some(cached) = self.status_cache.charger_mask_1 {
-            return Ok(cached);
-        }
-        let value = self.device.charger_mask_1().read_async().await?;
-        self.status_cache.charger_mask_1 = Some(value);
-        Ok(value)
+        self.device.charger_mask_1().read_async().await
     }
 
     /// Writes `ChargerMask1` to the charger mask 1 register (0x12, reset = 0x00).
@@ -707,9 +522,7 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
         &mut self,
         mask: crate::field_sets::ChargerMask1,
     ) -> Result<(), BQ25887Error<I2C::Error>> {
-        self.device.charger_mask_1().write_async(|reg| *reg = mask).await?;
-        self.status_cache.charger_mask_1 = Some(mask);
-        Ok(())
+        self.device.charger_mask_1().write_async(|reg| *reg = mask).await
     }
 
     /// Reads the charger mask 2 register (0x13, reset = 0x00).
@@ -718,12 +531,7 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     ///
     /// Returns an error if the I²C transaction fails.
     pub async fn read_charger_mask_2(&mut self) -> Result<crate::field_sets::ChargerMask2, BQ25887Error<I2C::Error>> {
-        if let Some(cached) = self.status_cache.charger_mask_2 {
-            return Ok(cached);
-        }
-        let value = self.device.charger_mask_2().read_async().await?;
-        self.status_cache.charger_mask_2 = Some(value);
-        Ok(value)
+        self.device.charger_mask_2().read_async().await
     }
 
     /// Writes `ChargerMask2` to the charger mask 2 register (0x13, reset = 0x00).
@@ -735,9 +543,7 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
         &mut self,
         mask: crate::field_sets::ChargerMask2,
     ) -> Result<(), BQ25887Error<I2C::Error>> {
-        self.device.charger_mask_2().write_async(|reg| *reg = mask).await?;
-        self.status_cache.charger_mask_2 = Some(mask);
-        Ok(())
+        self.device.charger_mask_2().write_async(|reg| *reg = mask).await
     }
 
     /// Reads the fault mask register (0x14, reset = 0x00).
@@ -746,12 +552,7 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     ///
     /// Returns an error if the I²C transaction fails.
     pub async fn read_fault_mask(&mut self) -> Result<crate::field_sets::FaultMask, BQ25887Error<I2C::Error>> {
-        if let Some(cached) = self.status_cache.fault_mask {
-            return Ok(cached);
-        }
-        let value = self.device.fault_mask().read_async().await?;
-        self.status_cache.fault_mask = Some(value);
-        Ok(value)
+        self.device.fault_mask().read_async().await
     }
 
     /// Writes `FaultMask` to the fault mask register (0x14, reset = 0x00).
@@ -763,9 +564,7 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
         &mut self,
         mask: crate::field_sets::FaultMask,
     ) -> Result<(), BQ25887Error<I2C::Error>> {
-        self.device.fault_mask().write_async(|reg| *reg = mask).await?;
-        self.status_cache.fault_mask = Some(mask);
-        Ok(())
+        self.device.fault_mask().write_async(|reg| *reg = mask).await
     }
 
     /// Reads the ADC control register (0x15, reset = 0x00).
@@ -948,12 +747,10 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     pub async fn read_part_information(&mut self) -> Result<PartInformationSummary, BQ25887Error<I2C::Error>> {
         let reg = self.device.part_information().read_async().await?;
         let summary = PartInformationSummary::try_from(reg).map_err(BQ25887Error::from)?;
-        self.part_information_cache = Some(summary);
         Ok(summary)
     }
 
     /// Issues a master reset by asserting `REG_RST` in register 0x25.
-    /// The method preserves the reported part number, writes the reset command to the device, and clears the driver's configuration cache so subsequent reads are refreshed.
     ///
     /// # Errors
     ///
@@ -961,11 +758,7 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     pub async fn master_reset(&mut self) -> Result<(), BQ25887Error<I2C::Error>> {
         let mut reg = self.device.part_information().read_async().await?;
         reg.set_reg_rst(true);
-        self.device.part_information().write_async(|r| *r = reg).await?;
-        self.config_cache = ConfigurationCache::default();
-        self.status_cache = StatusCache::default();
-        self.part_information_cache = None;
-        Ok(())
+        self.device.part_information().write_async(|r| *r = reg).await
     }
 
     /// ### Brief
@@ -1120,5 +913,195 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
         mask: crate::field_sets::CellBalanceMask,
     ) -> Result<(), BQ25887Error<I2C::Error>> {
         self.device.cell_balance_mask().write_async(|reg| *reg = mask).await
+    }
+
+    // ========================================================================
+    // ADC Convenience Methods
+    // ========================================================================
+
+    /// Enables the ADC in continuous conversion mode.
+    ///
+    /// This configures the ADC_CONTROL register (0x15) to enable the ADC with
+    /// continuous conversions. The ADC will continuously update voltage and
+    /// current measurements.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the I²C transaction fails.
+    pub async fn enable_adc_continuous(&mut self) -> Result<(), BQ25887Error<I2C::Error>> {
+        self.device.adc_control().write_async(|reg| {
+            reg.set_adc_en(true);
+            reg.set_adc_rate(crate::generated::AdcRate::Continuous);
+        }).await
+    }
+
+    /// Enables the ADC in one-shot conversion mode.
+    ///
+    /// This configures the ADC_CONTROL register (0x15) to enable the ADC with
+    /// one-shot conversion. The ADC will perform a single conversion.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the I²C transaction fails.
+    pub async fn enable_adc_oneshot(&mut self) -> Result<(), BQ25887Error<I2C::Error>> {
+        self.device.adc_control().write_async(|reg| {
+            reg.set_adc_en(true);
+            reg.set_adc_rate(crate::generated::AdcRate::OneShot);
+        }).await
+    }
+
+    /// Disables the ADC.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the I²C transaction fails.
+    pub async fn disable_adc(&mut self) -> Result<(), BQ25887Error<I2C::Error>> {
+        self.device.adc_control().write_async(|reg| {
+            reg.set_adc_en(false);
+        }).await
+    }
+
+    /// Reads the battery voltage in millivolts.
+    ///
+    /// Combines the VBAT ADC MSB and LSB registers (0x1D, 0x1E) into a single
+    /// voltage value. Resolution is 1mV per LSB.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the I²C transaction fails.
+    pub async fn read_vbat_mv(&mut self) -> Result<u16, BQ25887Error<I2C::Error>> {
+        let msb = self.read_vbat_adc_1().await?;
+        let lsb = self.read_vbat_adc_0().await?;
+        let raw = ((msb.vbat_adc_msb() as u16) << 8) | (lsb.vbat_adc_lsb() as u16);
+        Ok(raw) // 1mV per LSB
+    }
+
+    /// Reads the VBUS (input) voltage in millivolts.
+    ///
+    /// Combines the VBUS ADC MSB and LSB registers (0x1B, 0x1C) into a single
+    /// voltage value. Resolution is 1mV per LSB.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the I²C transaction fails.
+    pub async fn read_vbus_mv(&mut self) -> Result<u16, BQ25887Error<I2C::Error>> {
+        let msb = self.read_vbus_adc_1().await?;
+        let lsb = self.read_vbus_adc_0().await?;
+        let raw = ((msb.vbus_adc_msb() as u16) << 8) | (lsb.vbus_adc_lsb() as u16);
+        Ok(raw) // 1mV per LSB
+    }
+
+    /// Reads the charge current in milliamps.
+    ///
+    /// Combines the ICHG ADC MSB and LSB registers (0x19, 0x1A) into a single
+    /// current value. Resolution is 1mA per LSB.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the I²C transaction fails.
+    pub async fn read_ichg_ma(&mut self) -> Result<u16, BQ25887Error<I2C::Error>> {
+        let msb = self.read_ichg_adc_1().await?;
+        let lsb = self.read_ichg_adc_0().await?;
+        let raw = ((msb.ichg_adc_msb() as u16) << 8) | (lsb.ichg_adc_lsb() as u16);
+        Ok(raw) // 1mA per LSB
+    }
+
+    /// Reads the input current in milliamps.
+    ///
+    /// Combines the IBUS ADC MSB and LSB registers (0x17, 0x18) into a single
+    /// current value. Resolution is 1mA per LSB.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the I²C transaction fails.
+    pub async fn read_ibus_ma(&mut self) -> Result<u16, BQ25887Error<I2C::Error>> {
+        let msb = self.read_ibus_adc_1().await?;
+        let lsb = self.read_ibus_adc_0().await?;
+        let raw = ((msb.ibus_adc_msb() as u16) << 8) | (lsb.ibus_adc_lsb() as u16);
+        Ok(raw) // 1mA per LSB
+    }
+
+    /// Reads the top cell voltage in millivolts (for 2S configurations).
+    ///
+    /// Combines the VCELLTOP ADC MSB and LSB registers (0x1F, 0x20) into a single
+    /// voltage value. Resolution is 1mV per LSB.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the I²C transaction fails.
+    pub async fn read_vcell_top_mv(&mut self) -> Result<u16, BQ25887Error<I2C::Error>> {
+        let msb = self.read_vcell_top_adc_1().await?;
+        let lsb = self.read_vcell_top_adc_0().await?;
+        let raw = ((msb.vcelltop_adc_msb() as u16) << 8) | (lsb.vcelltop_adc_lsb() as u16);
+        Ok(raw) // 1mV per LSB
+    }
+
+    /// Reads the bottom cell voltage in millivolts (for 2S configurations).
+    ///
+    /// Combines the VCELLBOT ADC MSB and LSB registers (0x26, 0x27) into a single
+    /// voltage value. Resolution is 1mV per LSB.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the I²C transaction fails.
+    pub async fn read_vcell_bot_mv(&mut self) -> Result<u16, BQ25887Error<I2C::Error>> {
+        let msb = self.read_vcellbot_adc_1().await?;
+        let lsb = self.read_vcellbot_adc_0().await?;
+        let raw = ((msb.vcellbot_adc_msb() as u16) << 8) | (lsb.vcellbot_adc_lsb() as u16);
+        Ok(raw) // 1mV per LSB
+    }
+
+    /// Reads the die temperature ADC raw value.
+    ///
+    /// Combines the TDIE ADC MSB and LSB registers (0x23, 0x24) into a single
+    /// raw ADC value. Use [`read_tdie_celsius`] for a converted temperature value.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the I²C transaction fails.
+    pub async fn read_tdie_raw(&mut self) -> Result<u16, BQ25887Error<I2C::Error>> {
+        let msb = self.read_tdie_adc_1().await?;
+        let lsb = self.read_tdie_adc_0().await?;
+        let raw = ((msb.tdie_adc_msb() as u16) << 8) | (lsb.tdie_adc_lsb() as u16);
+        Ok(raw)
+    }
+
+    /// Reads the die temperature in degrees Celsius (as fixed-point × 10).
+    ///
+    /// Returns the temperature multiplied by 10 to preserve 0.5°C resolution
+    /// without floating point. For example, 25.5°C is returned as 255.
+    ///
+    /// The TDIE ADC has 0.5°C resolution with range 0°C to 128°C.
+    /// Bit 15 is the sign bit (two's complement).
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the I²C transaction fails.
+    pub async fn read_tdie_decidegrees(&mut self) -> Result<i16, BQ25887Error<I2C::Error>> {
+        let raw = self.read_tdie_raw().await?;
+        // Each LSB = 0.5°C, so multiply by 5 to get decidegrees (0.1°C units)
+        // Handle sign bit (bit 15) for two's complement
+        let temp = if raw & 0x8000 != 0 {
+            // Negative temperature (two's complement)
+            -(((!raw).wrapping_add(1) & 0x7FFF) as i16 * 5)
+        } else {
+            (raw as i16) * 5
+        };
+        Ok(temp)
+    }
+
+    /// Reads the thermistor (TS) ADC raw value.
+    ///
+    /// Combines the TS ADC MSB and LSB registers (0x21, 0x22) into a single
+    /// raw ADC value. See datasheet for temperature conversion.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the I²C transaction fails.
+    pub async fn read_ts_raw(&mut self) -> Result<u16, BQ25887Error<I2C::Error>> {
+        let msb = self.read_ts_adc_1().await?;
+        let lsb = self.read_ts_adc_0().await?;
+        let raw = ((msb.ts_adc_msb() as u16) << 8) | (lsb.ts_adc_lsb() as u16);
+        Ok(raw)
     }
 }

@@ -131,17 +131,12 @@ fn test_reg01_defaults() {
 }
 
 #[test]
-fn test_master_reset_asserts_reg_rst_and_clears_cache() {
+fn test_master_reset_asserts_reg_rst() {
     let i2c = DummyAsyncI2c::new(vec![0x28]);
     let state = i2c.state();
     let mut driver = Bq25887Driver::new(i2c);
 
-    block_on(driver.read_charge_current_limit()).unwrap();
-    assert!(driver.configuration_cache().charge_current_limit.is_some());
-
     block_on(driver.master_reset()).unwrap();
-
-    assert!(driver.configuration_cache().charge_current_limit.is_none());
 
     let writes = state.borrow().last_write.clone();
     assert_eq!(writes, vec![0x25, 0xA8]);
