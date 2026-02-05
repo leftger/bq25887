@@ -998,6 +998,27 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
         Ok(adc_control.adc_en())
     }
 
+    /// Checks if power is good (input source detection complete).
+    ///
+    /// Returns true when PG_STAT is HIGH, indicating:
+    /// - VBUS is above VBUS_UVLO_RISING
+    /// - VBUS is below VBUS_OV threshold
+    /// - Input is not a poor source
+    /// - Input Source Type Detection is completed
+    /// - CD pin is LOW
+    ///
+    /// ADC conversion is interrupted upon adapter plug-in and only resumes after
+    /// Input Source Type Detection is complete. Check this before trusting ADC
+    /// values after a plug event.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the I²C transaction fails.
+    pub async fn is_power_good(&mut self) -> Result<bool, BQ25887Error<I2C::Error>> {
+        let status = self.device.charger_status_2().read_async().await?;
+        Ok(status.pg_stat())
+    }
+
     /// Enables the ADC in continuous conversion mode.
     ///
     /// This configures the ADC_CONTROL register (0x15) to enable the ADC with
