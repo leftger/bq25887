@@ -85,6 +85,12 @@ pub use generated::Pn;
 pub use generated::AdcRate;
 /// Generated register field definitions for the charger.
 pub use generated::field_sets;
+/// Cell recharge threshold offset selection.
+pub use generated::VcellRechg;
+/// Charge status enumeration.
+pub use generated::ChrgStat;
+/// Watchdog timer timeout selection.
+pub use generated::Watchdog;
 
 #[cfg(feature = "embassy")]
 #[cfg_attr(docsrs, doc(cfg(feature = "embassy")))]
