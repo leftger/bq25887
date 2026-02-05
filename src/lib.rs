@@ -916,6 +916,87 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     }
 
     // ========================================================================
+    // Interrupt and Flag Convenience Methods
+    // ========================================================================
+
+    /// Masks all interrupt sources, disabling INT pin pulses.
+    ///
+    /// Use this when the INT pin is not connected or not monitored. Events will
+    /// still be recorded in the FLAG registers and can be read via
+    /// [`read_and_clear_all_flags`].
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the I²C transaction fails.
+    pub async fn mask_all_interrupts(&mut self) -> Result<(), BQ25887Error<I2C::Error>> {
+        // Mask all charger interrupts (CHARGER_MASK_1: 0x12)
+        self.device.charger_mask_1().write_async(|reg| {
+            reg.set_adc_done_mask(true);
+            reg.set_iindpm_mask(true);
+            reg.set_vindpm_mask(true);
+            reg.set_treg_mask(true);
+            reg.set_wd_mask(true);
+            reg.set_chrg_mask(true);
+        }).await?;
+
+        // Mask all charger interrupts (CHARGER_MASK_2: 0x13)
+        self.device.charger_mask_2().write_async(|reg| {
+            reg.set_pg_mask(true);
+            reg.set_vbus_mask(true);
+            reg.set_ts_mask(true);
+            reg.set_ico_mask(true);
+        }).await?;
+
+        // Mask all fault interrupts (FAULT_MASK: 0x14)
+        self.device.fault_mask().write_async(|reg| {
+            reg.set_vbus_ovp_mask(true);
+            reg.set_tshut_mask(true);
+            reg.set_tmr_mask(true);
+            reg.set_sns_short_mask(true);
+        }).await?;
+
+        // Mask all cell balance interrupts (CELL_BALANCE_MASK: 0x2A)
+        self.device.cell_balance_mask().write_async(|reg| {
+            reg.set_cb_mask(true);
+            reg.set_hs_cv_mask(true);
+            reg.set_ls_cv_mask(true);
+            reg.set_hs_ov_mask(true);
+            reg.set_ls_ov_mask(true);
+            reg.set_cb_oc_mask(true);
+        }).await?;
+
+        Ok(())
+    }
+
+    /// Reads and clears all FLAG registers, returning events that occurred since last read.
+    ///
+    /// FLAG registers are cleared on read, so this captures events that happened
+    /// between polling cycles. Useful when INT pin is not connected.
+    ///
+    /// # Returns
+    ///
+    /// A tuple of (charger_flag_1, charger_flag_2, fault_flag, cell_balance_flag) registers.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the I²C transaction fails.
+    pub async fn read_and_clear_all_flags(&mut self) -> Result<
+        (
+            crate::field_sets::ChargerFlag1,
+            crate::field_sets::ChargerFlag2,
+            crate::field_sets::FaultFlag,
+            crate::field_sets::CellBalanceFlag,
+        ),
+        BQ25887Error<I2C::Error>
+    > {
+        let flag1 = self.device.charger_flag_1().read_async().await?;
+        let flag2 = self.device.charger_flag_2().read_async().await?;
+        let fault = self.device.fault_flag().read_async().await?;
+        let cell_balance = self.device.cell_balance_flag().read_async().await?;
+        Ok((flag1, flag2, fault, cell_balance))
+    }
+
+    // ========================================================================
     // Watchdog Timer Convenience Methods
     // ========================================================================
 
