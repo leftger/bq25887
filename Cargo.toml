@@ -1,6 +1,6 @@
 [package]
 name = "bq25887"
-version = "0.1.6"
+version = "0.1.7"
 description = "Device driver for the Texas Instruments BQ25887 linear battery chargers."
 edition = "2024"
 authors = ["Gerzain Mata <leftger@gmail.com>", "Tavish Srivastava <tavishsrivastava87@gmail.com>"]

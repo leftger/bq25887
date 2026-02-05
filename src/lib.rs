@@ -1285,4 +1285,82 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
         let raw = ((msb.ts_adc_msb() as u16) << 8) | (lsb.ts_adc_lsb() as u16);
         Ok(raw)
     }
+
+    // ========================================================================
+    // Charging Control Convenience Methods
+    // ========================================================================
+
+    /// Sets the cell recharge threshold offset below VCELLREG.
+    ///
+    /// After charge termination, the charger automatically restarts when the
+    /// battery voltage drops below (VCELLREG - threshold). A larger threshold
+    /// gives more margin for automatic recharge to trigger.
+    ///
+    /// # Arguments
+    ///
+    /// * `threshold` - The recharge threshold (50mV, 100mV, 150mV, or 200mV)
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the I²C transaction fails.
+    pub async fn set_recharge_threshold(
+        &mut self,
+        threshold: crate::generated::VcellRechg,
+    ) -> Result<(), BQ25887Error<I2C::Error>> {
+        self.device.charger_ctrl_2().modify_async(|reg| {
+            reg.set_vcell_rechg(threshold);
+        }).await
+    }
+
+    /// Checks if charging is enabled (EN_CHG bit).
+    ///
+    /// Returns true if the EN_CHG bit in CHARGER_CTRL_2 is set, meaning
+    /// the charger is allowed to charge (subject to other conditions like
+    /// valid input source, no faults, etc.).
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the I²C transaction fails.
+    pub async fn is_charging_enabled(&mut self) -> Result<bool, BQ25887Error<I2C::Error>> {
+        let ctrl2 = self.device.charger_ctrl_2().read_async().await?;
+        Ok(ctrl2.en_chg())
+    }
+
+    /// Enables or disables charging.
+    ///
+    /// Sets the EN_CHG bit in CHARGER_CTRL_2. When disabled, the charger
+    /// will not charge even if a valid input source is present.
+    ///
+    /// # Arguments
+    ///
+    /// * `enabled` - true to enable charging, false to disable
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the I²C transaction fails.
+    pub async fn set_charging_enabled(&mut self, enabled: bool) -> Result<(), BQ25887Error<I2C::Error>> {
+        self.device.charger_ctrl_2().modify_async(|reg| {
+            reg.set_en_chg(enabled);
+        }).await
+    }
+
+    /// Gets the current charge status.
+    ///
+    /// Returns the CHRG_STAT field from CHARGER_STATUS_1, indicating the
+    /// current charging phase:
+    /// - `NotCharging`: Not charging
+    /// - `TrickleCharge`: Trickle charge (VBAT < VBAT_SHORT)
+    /// - `PreCharge`: Pre-charge (VBAT_UVLO < VBAT < VBAT_LOWV)
+    /// - `FastCharge`: Fast-charge (CC mode)
+    /// - `TaperCharge`: Taper charge (CV mode)
+    /// - `TopoffTimerCharging`: Top-off timer charging
+    /// - `ChargeTerminationDone`: Charge termination done
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the I²C transaction fails.
+    pub async fn get_charge_status(&mut self) -> Result<crate::generated::ChrgStat, BQ25887Error<I2C::Error>> {
+        let status1 = self.device.charger_status_1().read_async().await?;
+        Ok(status1.chrg_stat())
+    }
 }
