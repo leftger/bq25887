@@ -916,8 +916,87 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     }
 
     // ========================================================================
+    // Watchdog Timer Convenience Methods
+    // ========================================================================
+
+    /// Disables the I2C watchdog timer.
+    ///
+    /// When the watchdog is disabled, the device will remain in host mode indefinitely
+    /// without requiring periodic watchdog resets. This is useful when the host cannot
+    /// guarantee timely watchdog servicing.
+    ///
+    /// # Note
+    ///
+    /// When the watchdog timer expires, the device returns to default mode and resets
+    /// most registers to their default values (including ADC_CONTROL, which disables
+    /// the ADC). Disabling the watchdog prevents this automatic reset.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the I²C transaction fails.
+    pub async fn disable_watchdog(&mut self) -> Result<(), BQ25887Error<I2C::Error>> {
+        self.device.charger_ctrl_1().modify_async(|reg| {
+            reg.set_watchdog(crate::generated::Watchdog::WdDisable);
+        }).await
+    }
+
+    /// Sets the I2C watchdog timer timeout period.
+    ///
+    /// The watchdog timer must be reset by calling [`reset_watchdog`] before it
+    /// expires, otherwise the device will return to default mode and reset most
+    /// registers to their default values.
+    ///
+    /// # Arguments
+    ///
+    /// * `timeout` - The watchdog timeout period (40s, 80s, 160s, or disabled)
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the I²C transaction fails.
+    pub async fn set_watchdog_timeout(
+        &mut self,
+        timeout: crate::generated::Watchdog,
+    ) -> Result<(), BQ25887Error<I2C::Error>> {
+        self.device.charger_ctrl_1().modify_async(|reg| {
+            reg.set_watchdog(timeout);
+        }).await
+    }
+
+    /// Resets the I2C watchdog timer.
+    ///
+    /// This must be called periodically (before the watchdog timeout expires) to
+    /// keep the device in host mode. If the watchdog expires, the device returns
+    /// to default mode and resets most registers to their default values.
+    ///
+    /// The WD_RST bit is self-clearing (returns to 0 after the reset is performed).
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the I²C transaction fails.
+    pub async fn reset_watchdog(&mut self) -> Result<(), BQ25887Error<I2C::Error>> {
+        self.device.charger_ctrl_3().modify_async(|reg| {
+            reg.set_wd_rst(true);
+        }).await
+    }
+
+    // ========================================================================
     // ADC Convenience Methods
     // ========================================================================
+
+    /// Checks if the ADC is currently enabled.
+    ///
+    /// This reads the ADC_EN bit from the ADC_CONTROL register. It's recommended
+    /// to verify ADC_EN after enabling the ADC, as the device may auto-clear it
+    /// under certain conditions (e.g., no valid power source, all ADC channels
+    /// disabled, or mode changes).
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the I²C transaction fails.
+    pub async fn is_adc_enabled(&mut self) -> Result<bool, BQ25887Error<I2C::Error>> {
+        let adc_control = self.device.adc_control().read_async().await?;
+        Ok(adc_control.adc_en())
+    }
 
     /// Enables the ADC in continuous conversion mode.
     ///
