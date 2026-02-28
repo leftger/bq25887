@@ -981,7 +981,7 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     ///
     /// # Returns
     ///
-    /// A tuple of (charger_flag_1, charger_flag_2, fault_flag, cell_balance_flag) registers.
+    /// A tuple of (`charger_flag_1`, `charger_flag_2`, `fault_flag`, `cell_balance_flag`) registers.
     ///
     /// # Errors
     ///
@@ -1015,7 +1015,7 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     /// # Note
     ///
     /// When the watchdog timer expires, the device returns to default mode and resets
-    /// most registers to their default values (including ADC_CONTROL, which disables
+    /// most registers to their default values (including `ADC_CONTROL`, which disables
     /// the ADC). Disabling the watchdog prevents this automatic reset.
     ///
     /// # Errors
@@ -1055,7 +1055,7 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     /// keep the device in host mode. If the watchdog expires, the device returns
     /// to default mode and resets most registers to their default values.
     ///
-    /// The WD_RST bit is self-clearing (returns to 0 after the reset is performed).
+    /// The `WD_RST` bit is self-clearing (returns to 0 after the reset is performed).
     ///
     /// # Errors
     ///
@@ -1072,8 +1072,8 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
 
     /// Checks if the ADC is currently enabled.
     ///
-    /// This reads the ADC_EN bit from the ADC_CONTROL register. It's recommended
-    /// to verify ADC_EN after enabling the ADC, as the device may auto-clear it
+    /// This reads the `ADC_EN` bit from the `ADC_CONTROL` register. It's recommended
+    /// to verify `ADC_EN` after enabling the ADC, as the device may auto-clear it
     /// under certain conditions (e.g., no valid power source, all ADC channels
     /// disabled, or mode changes).
     ///
@@ -1087,9 +1087,9 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
 
     /// Checks if power is good (input source detection complete).
     ///
-    /// Returns true when PG_STAT is HIGH, indicating:
-    /// - VBUS is above VBUS_UVLO_RISING
-    /// - VBUS is below VBUS_OV threshold
+    /// Returns true when `PG_STAT` is HIGH, indicating:
+    /// - VBUS is above `VBUS_UVLO_RISING`
+    /// - VBUS is below `VBUS_OV` threshold
     /// - Input is not a poor source
     /// - Input Source Type Detection is completed
     /// - CD pin is LOW
@@ -1108,7 +1108,7 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
 
     /// Enables the ADC in continuous conversion mode.
     ///
-    /// This configures the ADC_CONTROL register (0x15) to enable the ADC with
+    /// This configures the `ADC_CONTROL` register (0x15) to enable the ADC with
     /// continuous conversions. The ADC will continuously update voltage and
     /// current measurements.
     ///
@@ -1124,7 +1124,7 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
 
     /// Enables the ADC in one-shot conversion mode.
     ///
-    /// This configures the ADC_CONTROL register (0x15) to enable the ADC with
+    /// This configures the `ADC_CONTROL` register (0x15) to enable the ADC with
     /// one-shot conversion. The ADC will perform a single conversion.
     ///
     /// # Errors
@@ -1159,7 +1159,7 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     pub async fn read_vbat_mv(&mut self) -> Result<u16, BQ25887Error<I2C::Error>> {
         let msb = self.read_vbat_adc_1().await?;
         let lsb = self.read_vbat_adc_0().await?;
-        let raw = ((msb.vbat_adc_msb() as u16) << 8) | (lsb.vbat_adc_lsb() as u16);
+        let raw = (u16::from(msb.vbat_adc_msb()) << 8) | u16::from(lsb.vbat_adc_lsb());
         Ok(raw) // 1mV per LSB
     }
 
@@ -1174,7 +1174,7 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     pub async fn read_vbus_mv(&mut self) -> Result<u16, BQ25887Error<I2C::Error>> {
         let msb = self.read_vbus_adc_1().await?;
         let lsb = self.read_vbus_adc_0().await?;
-        let raw = ((msb.vbus_adc_msb() as u16) << 8) | (lsb.vbus_adc_lsb() as u16);
+        let raw = (u16::from(msb.vbus_adc_msb()) << 8) | u16::from(lsb.vbus_adc_lsb());
         Ok(raw) // 1mV per LSB
     }
 
@@ -1189,7 +1189,7 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     pub async fn read_ichg_ma(&mut self) -> Result<u16, BQ25887Error<I2C::Error>> {
         let msb = self.read_ichg_adc_1().await?;
         let lsb = self.read_ichg_adc_0().await?;
-        let raw = ((msb.ichg_adc_msb() as u16) << 8) | (lsb.ichg_adc_lsb() as u16);
+        let raw = (u16::from(msb.ichg_adc_msb()) << 8) | u16::from(lsb.ichg_adc_lsb());
         Ok(raw) // 1mA per LSB
     }
 
@@ -1204,7 +1204,7 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     pub async fn read_ibus_ma(&mut self) -> Result<u16, BQ25887Error<I2C::Error>> {
         let msb = self.read_ibus_adc_1().await?;
         let lsb = self.read_ibus_adc_0().await?;
-        let raw = ((msb.ibus_adc_msb() as u16) << 8) | (lsb.ibus_adc_lsb() as u16);
+        let raw = (u16::from(msb.ibus_adc_msb()) << 8) | u16::from(lsb.ibus_adc_lsb());
         Ok(raw) // 1mA per LSB
     }
 
@@ -1219,7 +1219,7 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     pub async fn read_vcell_top_mv(&mut self) -> Result<u16, BQ25887Error<I2C::Error>> {
         let msb = self.read_vcell_top_adc_1().await?;
         let lsb = self.read_vcell_top_adc_0().await?;
-        let raw = ((msb.vcelltop_adc_msb() as u16) << 8) | (lsb.vcelltop_adc_lsb() as u16);
+        let raw = (u16::from(msb.vcelltop_adc_msb()) << 8) | u16::from(lsb.vcelltop_adc_lsb());
         Ok(raw) // 1mV per LSB
     }
 
@@ -1234,7 +1234,7 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     pub async fn read_vcell_bot_mv(&mut self) -> Result<u16, BQ25887Error<I2C::Error>> {
         let msb = self.read_vcellbot_adc_1().await?;
         let lsb = self.read_vcellbot_adc_0().await?;
-        let raw = ((msb.vcellbot_adc_msb() as u16) << 8) | (lsb.vcellbot_adc_lsb() as u16);
+        let raw = (u16::from(msb.vcellbot_adc_msb()) << 8) | u16::from(lsb.vcellbot_adc_lsb());
         Ok(raw) // 1mV per LSB
     }
 
@@ -1249,7 +1249,7 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     pub async fn read_tdie_raw(&mut self) -> Result<u16, BQ25887Error<I2C::Error>> {
         let msb = self.read_tdie_adc_1().await?;
         let lsb = self.read_tdie_adc_0().await?;
-        let raw = ((msb.tdie_adc_msb() as u16) << 8) | (lsb.tdie_adc_lsb() as u16);
+        let raw = (u16::from(msb.tdie_adc_msb()) << 8) | u16::from(lsb.tdie_adc_lsb());
         Ok(raw)
     }
 
@@ -1270,9 +1270,9 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
         // Handle sign bit (bit 15) for two's complement
         let temp = if raw & 0x8000 != 0 {
             // Negative temperature (two's complement)
-            -(((!raw).wrapping_add(1) & 0x7FFF) as i16 * 5)
+            -((((!raw).wrapping_add(1) & 0x7FFF).cast_signed()) * 5)
         } else {
-            (raw as i16) * 5
+            raw.cast_signed() * 5
         };
         Ok(temp)
     }
@@ -1288,7 +1288,7 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     pub async fn read_ts_raw(&mut self) -> Result<u16, BQ25887Error<I2C::Error>> {
         let msb = self.read_ts_adc_1().await?;
         let lsb = self.read_ts_adc_0().await?;
-        let raw = ((msb.ts_adc_msb() as u16) << 8) | (lsb.ts_adc_lsb() as u16);
+        let raw = (u16::from(msb.ts_adc_msb()) << 8) | u16::from(lsb.ts_adc_lsb());
         Ok(raw)
     }
 
@@ -1318,9 +1318,9 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
         }).await
     }
 
-    /// Checks if charging is enabled (EN_CHG bit).
+    /// Checks if charging is enabled (`EN_CHG` bit).
     ///
-    /// Returns true if the EN_CHG bit in CHARGER_CTRL_2 is set, meaning
+    /// Returns true if the `EN_CHG` bit in `CHARGER_CTRL_2` is set, meaning
     /// the charger is allowed to charge (subject to other conditions like
     /// valid input source, no faults, etc.).
     ///
@@ -1334,7 +1334,7 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
 
     /// Enables or disables charging.
     ///
-    /// Sets the EN_CHG bit in CHARGER_CTRL_2. When disabled, the charger
+    /// Sets the `EN_CHG` bit in `CHARGER_CTRL_2`. When disabled, the charger
     /// will not charge even if a valid input source is present.
     ///
     /// # Arguments
@@ -1352,11 +1352,11 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
 
     /// Gets the current charge status.
     ///
-    /// Returns the CHRG_STAT field from CHARGER_STATUS_1, indicating the
+    /// Returns the `CHRG_STAT` field from `CHARGER_STATUS_1`, indicating the
     /// current charging phase:
     /// - `NotCharging`: Not charging
-    /// - `TrickleCharge`: Trickle charge (VBAT < VBAT_SHORT)
-    /// - `PreCharge`: Pre-charge (VBAT_UVLO < VBAT < VBAT_LOWV)
+    /// - `TrickleCharge`: Trickle charge (VBAT < `VBAT_SHORT`)
+    /// - `PreCharge`: Pre-charge (`VBAT_UVLO` < VBAT < `VBAT_LOWV`)
     /// - `FastCharge`: Fast-charge (CC mode)
     /// - `TaperCharge`: Taper charge (CV mode)
     /// - `TopoffTimerCharging`: Top-off timer charging

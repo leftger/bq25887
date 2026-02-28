@@ -6,8 +6,8 @@ mod demo {
     use core::convert::Infallible;
     use core::future::{Ready, pending, ready};
 
-    use bq25887::embassy::{SharedBus, new_driver_with_status_cache};
-    use bq25887::{BQ25887Error, StatusCache};
+    use bq25887::BQ25887Error;
+    use bq25887::embassy::{SharedBus, new_driver};
     use embassy_executor::Spawner;
     use embassy_sync::blocking_mutex::raw::ThreadModeRawMutex;
     use embedded_hal_async::i2c::I2c;
@@ -86,100 +86,79 @@ mod demo {
 
     #[embassy_executor::task]
     async fn charger_monitor_task(bus: &'static SharedBus<ThreadModeRawMutex, FakeI2c>) {
-        match new_driver_with_status_cache(bus).await {
-            Ok(mut driver) => {
-                for poll in 1..=3 {
-                    if let Err(err) = driver.refresh_status_register_cache().await {
-                        log_error("charger_monitor_task: refresh_status_register_cache", err);
-                        break;
-                    }
-
-                    if let Some(status) = driver.status_cache().charger_status_1 {
-                        println!(
-                            "[monitor #{poll}] CHRG_STAT={}, VSYS_STAT={}, WATCHDOG={}",
-                            status.chrg_stat(),
-                            status.vsys_stat(),
-                            status.watchdog_fault()
-                        );
-                    } else {
-                        println!("[monitor #{poll}] charger_status_1 cache empty");
-                    }
-
-                    yield_now().await;
+        let mut driver = new_driver(bus);
+        for poll in 1..=3 {
+            match driver.read_charger_status_1().await {
+                Ok(status) => {
+                    println!(
+                        "[monitor #{poll}] CHRG_STAT={}, VSYS_STAT={}, WATCHDOG={}",
+                        status.chrg_stat(),
+                        status.vsys_stat(),
+                        status.watchdog_fault()
+                    );
+                }
+                Err(err) => {
+                    log_error("charger_monitor_task: read_charger_status_1", err);
+                    break;
                 }
             }
-            Err(err) => log_error("charger_monitor_task: new_driver_with_status_cache", err),
+            yield_now().await;
         }
     }
 
     #[embassy_executor::task]
     async fn telemetry_task(bus: &'static SharedBus<ThreadModeRawMutex, FakeI2c>) {
-        match collect_snapshot(bus).await {
-            Ok(snapshot) => pretty_print_snapshot(snapshot),
-            Err(err) => log_error("telemetry_task: collect_snapshot", err),
+        let mut driver = new_driver(bus);
+        match driver.read_charger_status_1().await {
+            Ok(status) => {
+                println!("[telemetry] ---- status snapshot ----");
+                println!(
+                    "  ChargerStatus1: CHRG_STAT={}, VSYS_STAT={}",
+                    status.chrg_stat(),
+                    status.vsys_stat()
+                );
+            }
+            Err(err) => log_error("telemetry_task: read_charger_status_1", err),
         }
+
+        match driver.read_fault_status().await {
+            Ok(faults) => {
+                println!(
+                    "  FaultStatus: INPUT={}, THERMAL={}, TIMER={}",
+                    faults.input_fault(),
+                    faults.thermal_shutdown(),
+                    faults.safety_timer_expired()
+                );
+            }
+            Err(err) => log_error("telemetry_task: read_fault_status", err),
+        }
+        println!("------------------------------------------");
     }
 
     #[embassy_executor::task]
     async fn control_task(bus: &'static SharedBus<ThreadModeRawMutex, FakeI2c>) {
-        match new_driver_with_status_cache(bus).await {
-            Ok(mut driver) => {
-                if let Err(err) = driver.refresh_configuration_cache().await {
-                    log_error("control_task: refresh_configuration_cache", err);
+        let mut driver = new_driver(bus);
+
+        println!("[control] Reading current charge-current limit");
+        match driver.read_charge_current_limit().await {
+            Ok(cached) => {
+                let new_limit = cached.with_ichg(cached.ichg().saturating_add(1));
+                println!("[control] Raising charge-current limit by one step");
+                if let Err(err) = driver.write_charge_current_limit(new_limit).await {
+                    log_error("control_task: write_charge_current_limit", err);
                     return;
                 }
-
-                println!("[control] Raising charge-current limit by one step");
-                if let Some(mut cached) = driver.configuration_cache().charge_current_limit {
-                    let new_limit = cached.with_ichg(cached.ichg().saturating_add(1));
-                    if let Err(err) = driver.write_charge_current_limit(new_limit).await {
-                        log_error("control_task: write_charge_current_limit", err);
-                        return;
-                    }
-                } else {
-                    println!("[control] No cached charge_current_limit; using device defaults");
-                }
-
-                println!("[control] Enabling battery connection");
-                if let Err(err) = driver.enable_battery_connection(true).await {
-                    log_error("control_task: enable_battery_connection", err);
-                }
             }
-            Err(err) => log_error("control_task: new_driver_with_status_cache", err),
-        }
-    }
-
-    async fn collect_snapshot(
-        bus: &'static SharedBus<ThreadModeRawMutex, FakeI2c>,
-    ) -> Result<StatusCache, BQ25887Error<Infallible>> {
-        let mut driver = new_driver_with_status_cache(bus).await?;
-        driver.refresh_status_register_cache().await?;
-        Ok(*driver.status_cache())
-    }
-
-    fn pretty_print_snapshot(snapshot: StatusCache) {
-        println!("[telemetry] ---- cached status snapshot ----");
-        if let Some(status) = snapshot.charger_status_1 {
-            println!(
-                "  ChargerStatus1: CHRG_STAT={}, VSYS_STAT={}",
-                status.chrg_stat(),
-                status.vsys_stat()
-            );
-        } else {
-            println!("  ChargerStatus1: <missing>");
+            Err(err) => {
+                log_error("control_task: read_charge_current_limit", err);
+                return;
+            }
         }
 
-        if let Some(faults) = snapshot.fault_status {
-            println!(
-                "  FaultStatus: INPUT={}, THERMAL={}, TIMER={}",
-                faults.input_fault(),
-                faults.thermal_shutdown(),
-                faults.safety_timer_expired()
-            );
-        } else {
-            println!("  FaultStatus: <missing>");
+        println!("[control] Enabling battery connection");
+        if let Err(err) = driver.enable_battery_connection(true).await {
+            log_error("control_task: enable_battery_connection", err);
         }
-        println!("------------------------------------------");
     }
 
     fn log_error(label: &str, err: BQ25887Error<Infallible>) {
