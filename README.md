@@ -34,7 +34,7 @@ embedded-hal-async = "1.0"
 
 Use any I²C type that implements `embedded_hal_async::i2c::I2c` to talk to the charger:
 
-```/dev/null/examples/async.rs#L1-48
+```rust
 use bq25887::Bq25887Driver;
 
 pub async fn configure_charger<I2C>(i2c: I2C) -> Result<(), bq25887::BQ25887Error<I2C::Error>>
@@ -43,22 +43,12 @@ where
 {
     let mut driver = Bq25887Driver::new(i2c);
 
-    // Refresh cached register view, including the cell voltage limit (register 0x00)
-    driver.refresh_configuration_cache().await?;
-    let limit = driver
-        .configuration_cache()
-        .cell_voltage_limit
-        .expect("cache populated");
+    // Read the configured cell charge voltage limit as a millivolt value
+    let limit_mv = driver.read_cell_voltage_limit_mv().await?;
 
-    // Raise the regulation voltage slightly (example value only!)
-    let new_limit = limit.with_vcellreg(limit.vcellreg().saturating_add(1));
-    driver.write_voltage_regulation_limit(new_limit).await?;
-
-    // Check charger status after applying the new limit
+    // Check charger status
     let status = driver.read_charger_status_1().await?;
-    if status.chrg_stat() != 0 {
-        // handle charger state change here (for example, log telemetry or notify a power-management state machine)
-    }
+    let _ = (limit_mv, status);
 
     Ok(())
 }
@@ -69,6 +59,42 @@ where
 ## Charger configuration helpers
 
 The driver exposes high-level methods for each register group, e.g. `read_charge_current_limit`, `write_input_voltage_limit`, and friends. These helpers wrap the generated register accessors and convert conversion errors into the crate’s custom error type.
+
+### ADC reading helpers
+
+Convenience methods that combine MSB/LSB register pairs and return physical units:
+
+| Method | Returns | Resolution |
+|---|---|---|
+| `read_vbat_mv` | battery voltage (mV) | 1 mV/LSB |
+| `read_vbus_mv` | input voltage (mV) | 1 mV/LSB |
+| `read_ichg_ma` | charge current (mA) | 1 mA/LSB |
+| `read_ibus_ma` | input current (mA) | 1 mA/LSB |
+| `read_vcell_top_mv` | top cell voltage (mV) | 1 mV/LSB |
+| `read_vcell_bot_mv` | bottom cell voltage (mV) | 1 mV/LSB |
+| `read_tdie_decidegrees` | die temperature (0.1 °C units) | 0.5 °C/LSB |
+| `read_ts_raw` | raw TS ADC value | — |
+| `read_ts_centipercent` | thermistor voltage as % of REGN (0.01 % units) | 0.003 %/LSB |
+
+`read_ts_centipercent` returns `VTS/REGN × 100%` scaled by 100 — for example `5033` represents 50.33%. Pass this result to an NTC lookup table to obtain temperature.
+
+### Register limit helpers
+
+| Method | Returns |
+|---|---|
+| `read_cell_voltage_limit_mv` | VCELLREG setting converted to mV (offset 3400 mV, 5 mV steps) |
+
+### Charging control helpers
+
+`set_charging_enabled`, `get_charge_status`, `set_recharge_threshold`, `enable_battery_connection`, `is_power_good`.
+
+### Watchdog helpers
+
+`disable_watchdog`, `set_watchdog_timeout`, `reset_watchdog`.
+
+### Interrupt helpers
+
+`mask_all_interrupts`, `read_and_clear_all_flags`.
 
 ## Embassy integration
 
