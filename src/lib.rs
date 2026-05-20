@@ -222,6 +222,19 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
             .await
     }
 
+    /// Reads the cell charge voltage limit in millivolts.
+    ///
+    /// Converts the raw `VCELLREG` field from register 0x00 to millivolts.
+    /// Resolution is 5 mV per LSB with an offset of 3400 mV (range 3400–4600 mV).
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the I²C transaction fails.
+    pub async fn read_cell_voltage_limit_mv(&mut self) -> Result<u16, BQ25887Error<I2C::Error>> {
+        let reg = self.device.cell_voltage_limit().read_async().await?;
+        Ok(3400 + u16::from(reg.vcellreg()) * 5)
+    }
+
     /// Reads the charger current limit register (0x01, reset = 0x5E).
     ///
     /// # Errors
@@ -1290,6 +1303,24 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
         let lsb = self.read_ts_adc_0().await?;
         let raw = (u16::from(msb.ts_adc_msb()) << 8) | u16::from(lsb.ts_adc_lsb());
         Ok(raw)
+    }
+
+    /// Reads the thermistor (TS) ADC as a percentage of REGN voltage.
+    ///
+    /// Converts the combined TS ADC register pair (0x21, 0x22) to
+    /// `VTS/REGN × 100%` expressed in hundredths of a percent (0.01% units).
+    /// For example, a return value of `5033` represents 50.33%.
+    ///
+    /// The result is suitable as input to an NTC lookup table to convert to
+    /// temperature. The scaling is independent of the selected `ADC_SAMPLE`
+    /// resolution since all modes store data left-aligned in the 16-bit register.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the I²C transaction fails.
+    pub async fn read_ts_centipercent(&mut self) -> Result<u16, BQ25887Error<I2C::Error>> {
+        let raw = self.read_ts_raw().await?;
+        Ok((u32::from(raw) * 10000 / 65536) as u16)
     }
 
     // ========================================================================
