@@ -127,7 +127,7 @@ fn test_part_information_summary_invalid_pn() {
 #[test]
 fn test_reg01_defaults() {
     let reg = ChargeCurrentLimit::new();
-    assert_eq!(<[u8; 1]>::from(reg), [0x5E]);
+    assert_eq!(<[u8; 1]>::from(reg), [0x5D]);
 }
 
 #[test]

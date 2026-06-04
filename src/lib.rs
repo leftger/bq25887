@@ -586,7 +586,7 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
         self.device.fault_mask().write_async(|reg| *reg = mask).await
     }
 
-    /// Reads the ADC control register (0x15, reset = 0x00).
+    /// Reads the ADC control register (0x15, reset = 0x30).
     ///
     /// # Errors
     ///

@@ -28,7 +28,7 @@ CHARGE_CURRENT_LIMIT:
   description: Charger Current Limit Register
   address: 0x01
   size_bits: 8
-  reset_value: 0x5E
+  reset_value: 0x5D
   fields:
     EN_HIZ:
       base: bool
@@ -51,7 +51,7 @@ CHARGE_CURRENT_LIMIT:
       access: RW
       description: |
         Fast Charge Current Limit
-        Offset: 0 mA
+        Offset: 50 mA
         Range: 100 mA - 2200 mA
         Default: 1500 mA
         Note: values > 2.2 A (0x2C) are clamped to 2.2 A
@@ -915,16 +915,16 @@ ADC_CONTROL:
       conversion:
         name: ADC_SAMPLE
         Bits15:
-          value: 0b00
+          value: 0b11
           description: 15-bit (24ms)
         Bits14:
-          value: 0b01
+          value: 0b10
           description: 14-bit (12ms)
         Bits13:
-          value: 0b10
+          value: 0b01
           description: 13-bit (6ms)
         Bits12:
-          value: 0b11
+          value: 0b00
           description: 12-bit (3ms)
 ADC_FUNCTION_DISABLE:
   type: register
