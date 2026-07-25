@@ -75,22 +75,22 @@ mod generated {
     );
 }
 
+/// ADC conversion rate mode selection.
+pub use generated::AdcRate;
 /// Type-safe register accessor for the BQ25887 device.
 pub use generated::Bq25887;
+/// Charge status enumeration.
+pub use generated::ChrgStat;
 /// Enumeration of fast charge current limit selections.
 pub use generated::Ichg;
 /// Enumerated part number identifiers reported by the device.
 pub use generated::Pn;
-/// ADC conversion rate mode selection.
-pub use generated::AdcRate;
-/// Generated register field definitions for the charger.
-pub use generated::field_sets;
 /// Cell recharge threshold offset selection.
 pub use generated::VcellRechg;
-/// Charge status enumeration.
-pub use generated::ChrgStat;
 /// Watchdog timer timeout selection.
 pub use generated::Watchdog;
+/// Generated register field definitions for the charger.
+pub use generated::field_sets;
 
 #[cfg(feature = "embassy")]
 #[cfg_attr(docsrs, doc(cfg(feature = "embassy")))]
@@ -949,40 +949,52 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     /// Returns an error if the I²C transaction fails.
     pub async fn mask_all_interrupts(&mut self) -> Result<(), BQ25887Error<I2C::Error>> {
         // Mask all charger interrupts (CHARGER_MASK_1: 0x12)
-        self.device.charger_mask_1().write_async(|reg| {
-            reg.set_adc_done_mask(true);
-            reg.set_iindpm_mask(true);
-            reg.set_vindpm_mask(true);
-            reg.set_treg_mask(true);
-            reg.set_wd_mask(true);
-            reg.set_chrg_mask(true);
-        }).await?;
+        self.device
+            .charger_mask_1()
+            .write_async(|reg| {
+                reg.set_adc_done_mask(true);
+                reg.set_iindpm_mask(true);
+                reg.set_vindpm_mask(true);
+                reg.set_treg_mask(true);
+                reg.set_wd_mask(true);
+                reg.set_chrg_mask(true);
+            })
+            .await?;
 
         // Mask all charger interrupts (CHARGER_MASK_2: 0x13)
-        self.device.charger_mask_2().write_async(|reg| {
-            reg.set_pg_mask(true);
-            reg.set_vbus_mask(true);
-            reg.set_ts_mask(true);
-            reg.set_ico_mask(true);
-        }).await?;
+        self.device
+            .charger_mask_2()
+            .write_async(|reg| {
+                reg.set_pg_mask(true);
+                reg.set_vbus_mask(true);
+                reg.set_ts_mask(true);
+                reg.set_ico_mask(true);
+            })
+            .await?;
 
         // Mask all fault interrupts (FAULT_MASK: 0x14)
-        self.device.fault_mask().write_async(|reg| {
-            reg.set_vbus_ovp_mask(true);
-            reg.set_tshut_mask(true);
-            reg.set_tmr_mask(true);
-            reg.set_sns_short_mask(true);
-        }).await?;
+        self.device
+            .fault_mask()
+            .write_async(|reg| {
+                reg.set_vbus_ovp_mask(true);
+                reg.set_tshut_mask(true);
+                reg.set_tmr_mask(true);
+                reg.set_sns_short_mask(true);
+            })
+            .await?;
 
         // Mask all cell balance interrupts (CELL_BALANCE_MASK: 0x2A)
-        self.device.cell_balance_mask().write_async(|reg| {
-            reg.set_cb_mask(true);
-            reg.set_hs_cv_mask(true);
-            reg.set_ls_cv_mask(true);
-            reg.set_hs_ov_mask(true);
-            reg.set_ls_ov_mask(true);
-            reg.set_cb_oc_mask(true);
-        }).await?;
+        self.device
+            .cell_balance_mask()
+            .write_async(|reg| {
+                reg.set_cb_mask(true);
+                reg.set_hs_cv_mask(true);
+                reg.set_ls_cv_mask(true);
+                reg.set_hs_ov_mask(true);
+                reg.set_ls_ov_mask(true);
+                reg.set_cb_oc_mask(true);
+            })
+            .await?;
 
         Ok(())
     }
@@ -999,14 +1011,16 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     /// # Errors
     ///
     /// Returns an error if the I²C transaction fails.
-    pub async fn read_and_clear_all_flags(&mut self) -> Result<
+    pub async fn read_and_clear_all_flags(
+        &mut self,
+    ) -> Result<
         (
             crate::field_sets::ChargerFlag1,
             crate::field_sets::ChargerFlag2,
             crate::field_sets::FaultFlag,
             crate::field_sets::CellBalanceFlag,
         ),
-        BQ25887Error<I2C::Error>
+        BQ25887Error<I2C::Error>,
     > {
         let flag1 = self.device.charger_flag_1().read_async().await?;
         let flag2 = self.device.charger_flag_2().read_async().await?;
@@ -1035,9 +1049,12 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     ///
     /// Returns an error if the I²C transaction fails.
     pub async fn disable_watchdog(&mut self) -> Result<(), BQ25887Error<I2C::Error>> {
-        self.device.charger_ctrl_1().modify_async(|reg| {
-            reg.set_watchdog(crate::generated::Watchdog::WdDisable);
-        }).await
+        self.device
+            .charger_ctrl_1()
+            .modify_async(|reg| {
+                reg.set_watchdog(crate::generated::Watchdog::WdDisable);
+            })
+            .await
     }
 
     /// Sets the I2C watchdog timer timeout period.
@@ -1057,9 +1074,12 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
         &mut self,
         timeout: crate::generated::Watchdog,
     ) -> Result<(), BQ25887Error<I2C::Error>> {
-        self.device.charger_ctrl_1().modify_async(|reg| {
-            reg.set_watchdog(timeout);
-        }).await
+        self.device
+            .charger_ctrl_1()
+            .modify_async(|reg| {
+                reg.set_watchdog(timeout);
+            })
+            .await
     }
 
     /// Resets the I2C watchdog timer.
@@ -1074,9 +1094,12 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     ///
     /// Returns an error if the I²C transaction fails.
     pub async fn reset_watchdog(&mut self) -> Result<(), BQ25887Error<I2C::Error>> {
-        self.device.charger_ctrl_3().modify_async(|reg| {
-            reg.set_wd_rst(true);
-        }).await
+        self.device
+            .charger_ctrl_3()
+            .modify_async(|reg| {
+                reg.set_wd_rst(true);
+            })
+            .await
     }
 
     // ========================================================================
@@ -1129,10 +1152,13 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     ///
     /// Returns an error if the I²C transaction fails.
     pub async fn enable_adc_continuous(&mut self) -> Result<(), BQ25887Error<I2C::Error>> {
-        self.device.adc_control().write_async(|reg| {
-            reg.set_adc_en(true);
-            reg.set_adc_rate(crate::generated::AdcRate::Continuous);
-        }).await
+        self.device
+            .adc_control()
+            .write_async(|reg| {
+                reg.set_adc_en(true);
+                reg.set_adc_rate(crate::generated::AdcRate::Continuous);
+            })
+            .await
     }
 
     /// Enables the ADC in one-shot conversion mode.
@@ -1144,10 +1170,13 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     ///
     /// Returns an error if the I²C transaction fails.
     pub async fn enable_adc_oneshot(&mut self) -> Result<(), BQ25887Error<I2C::Error>> {
-        self.device.adc_control().write_async(|reg| {
-            reg.set_adc_en(true);
-            reg.set_adc_rate(crate::generated::AdcRate::OneShot);
-        }).await
+        self.device
+            .adc_control()
+            .write_async(|reg| {
+                reg.set_adc_en(true);
+                reg.set_adc_rate(crate::generated::AdcRate::OneShot);
+            })
+            .await
     }
 
     /// Disables the ADC.
@@ -1156,9 +1185,12 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     ///
     /// Returns an error if the I²C transaction fails.
     pub async fn disable_adc(&mut self) -> Result<(), BQ25887Error<I2C::Error>> {
-        self.device.adc_control().write_async(|reg| {
-            reg.set_adc_en(false);
-        }).await
+        self.device
+            .adc_control()
+            .write_async(|reg| {
+                reg.set_adc_en(false);
+            })
+            .await
     }
 
     /// Reads the battery voltage in millivolts.
@@ -1344,9 +1376,12 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
         &mut self,
         threshold: crate::generated::VcellRechg,
     ) -> Result<(), BQ25887Error<I2C::Error>> {
-        self.device.charger_ctrl_2().modify_async(|reg| {
-            reg.set_vcell_rechg(threshold);
-        }).await
+        self.device
+            .charger_ctrl_2()
+            .modify_async(|reg| {
+                reg.set_vcell_rechg(threshold);
+            })
+            .await
     }
 
     /// Checks if charging is enabled (`EN_CHG` bit).
@@ -1376,9 +1411,12 @@ impl<I2C: I2cTrait> Bq25887Driver<I2C> {
     ///
     /// Returns an error if the I²C transaction fails.
     pub async fn set_charging_enabled(&mut self, enabled: bool) -> Result<(), BQ25887Error<I2C::Error>> {
-        self.device.charger_ctrl_2().modify_async(|reg| {
-            reg.set_en_chg(enabled);
-        }).await
+        self.device
+            .charger_ctrl_2()
+            .modify_async(|reg| {
+                reg.set_en_chg(enabled);
+            })
+            .await
     }
 
     /// Gets the current charge status.
